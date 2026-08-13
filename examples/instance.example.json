@@ -10,7 +10,25 @@
     "webSearchProvider": "example-search"
   },
   "eventSources": [],
-  "roles": {},
+  "roles": {
+    "opportunity.prospect": {
+      "provider": "local",
+      "model": "$LLM_MODEL"
+    }
+  },
+  "researchTopics": [
+    "domains or trends worth a scheduled discovery pass, e.g. \"AI utilities for technical businesses\""
+  ],
+  "scoring": {
+    "weights": {
+      "confidence": 0.6,
+      "evidenceCount": 0.25,
+      "recency": 0.15
+    },
+    "typeWeights": {
+      "consulting-engagement": 1.2
+    }
+  },
   "web": {
     "authUserEnvVar": "EXAMPLECO_WEB_USER",
     "authPassEnvVar": "EXAMPLECO_WEB_PASS",

@@ -99,6 +99,32 @@
         }
       },
       "additionalProperties": false
+    },
+    "researchTopics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "properties": {
+        "weights": {
+          "type": "object",
+          "properties": {
+            "confidence": { "type": "number" },
+            "evidenceCount": { "type": "number" },
+            "recency": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "typeWeights": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

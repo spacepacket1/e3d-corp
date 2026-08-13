@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { run } from '../lib/cli.js';
 
-const exitCode = run();
+const exitCode = await run();
 if (typeof exitCode === 'number') {
   process.exitCode = exitCode;
 }
