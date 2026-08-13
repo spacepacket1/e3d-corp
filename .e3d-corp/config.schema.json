@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://e3d-corp.local/schemas/instance-config.json",
+  "title": "e3d-corp instance config",
+  "type": "object",
+  "required": ["name", "dataDir", "llm", "research", "eventSources", "roles"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataDir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "llm": {
+      "type": "object",
+      "required": ["baseUrlEnvVar", "modelEnvVar"],
+      "properties": {
+        "baseUrlEnvVar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelEnvVar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "research": {
+      "type": "object",
+      "required": ["futcoMcpUrl", "webSearchProvider"],
+      "properties": {
+        "futcoMcpUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "webSearchProvider": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "eventSources": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["provider", "model"],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "web": {
+      "type": "object",
+      "required": ["authUserEnvVar", "authPassEnvVar", "port"],
+      "properties": {
+        "authUserEnvVar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authPassEnvVar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "authorityNotify": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

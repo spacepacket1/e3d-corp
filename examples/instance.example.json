@@ -1,0 +1,23 @@
+{
+  "name": "exampleco",
+  "dataDir": ".e3d-corp/instance/exampleco",
+  "llm": {
+    "baseUrlEnvVar": "EXAMPLECO_LLM_BASE_URL",
+    "modelEnvVar": "EXAMPLECO_LLM_MODEL"
+  },
+  "research": {
+    "futcoMcpUrl": "http://127.0.0.1:4110",
+    "webSearchProvider": "example-search"
+  },
+  "eventSources": [],
+  "roles": {},
+  "web": {
+    "authUserEnvVar": "EXAMPLECO_WEB_USER",
+    "authPassEnvVar": "EXAMPLECO_WEB_PASS",
+    "port": 3000
+  },
+  "authorityNotify": {
+    "email": "ops@example.com",
+    "command": "notify-authority"
+  }
+}

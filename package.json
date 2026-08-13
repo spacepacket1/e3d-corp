@@ -1,0 +1,16 @@
+{
+  "name": "e3d-corp",
+  "version": "0.1.0",
+  "description": "Company runtime for evidence-backed opportunities and decisions",
+  "type": "module",
+  "bin": {
+    "e3d-corp": "./bin/e3d-corp"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check bin/e3d-corp && node --test"
+  }
+}
