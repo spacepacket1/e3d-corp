@@ -51,7 +51,7 @@ test('help output documents phase 1 and later-phase commands', () => {
   assert.match(output, /config validate <instance-config-path>/);
   assert.match(output, /opportunities check-shipped <id>/);
   assert.match(output, /evaluate report/);
-  assert.match(output, /Phase 1 implements only `config validate`/);
+  assert.match(output, /Implemented so far: `config validate`, `event add`, `event log`/);
 });
 
 test('futco instance directory placeholder exists', () => {
