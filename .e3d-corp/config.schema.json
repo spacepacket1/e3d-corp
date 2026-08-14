@@ -39,6 +39,10 @@
         "webSearchProvider": {
           "type": "string",
           "minLength": 1
+        },
+        "webSearchApiKeyEnvVar": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false
