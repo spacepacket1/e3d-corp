@@ -477,8 +477,14 @@ test('CLI: a hand-crafted proposal at each authority level can be approved or re
       correlationId: 'phase5-cli-chain'
     });
 
+    // pilot-handoff, not send-outreach: this test is about the generic
+    // approve/reject/list/show CLI wrapper across authority levels, not
+    // about Phase 7's real send-outreach executor (which lib/cli.js
+    // registers for every CLI invocation) - pilot-handoff is also level 2
+    // but has no real executor registered until Phase 8, so it stays a
+    // no-op here exactly as it did before Phase 7 existed.
     const { proposal: level2 } = createProposal(dataDir, {
-      type: 'send-outreach',
+      type: 'pilot-handoff',
       payload: {},
       proposedBy: proposedBy(),
       causationId: trigger.id,

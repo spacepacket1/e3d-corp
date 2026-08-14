@@ -15,7 +15,17 @@
     "opportunity.prospect": {
       "provider": "local",
       "model": "$LLM_MODEL"
+    },
+    "opportunity.communicator": {
+      "provider": "local",
+      "model": "$LLM_MODEL"
     }
+  },
+  "outreach": {
+    "provider": "ses",
+    "region": "us-east-1",
+    "fromEmail": "outreach@example.com",
+    "fallbackToEmail": "hello@example.com"
   },
   "researchTopics": [
     "domains or trends worth a scheduled discovery pass, e.g. \"AI utilities for technical businesses\""
