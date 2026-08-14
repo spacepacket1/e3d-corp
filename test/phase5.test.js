@@ -468,6 +468,26 @@ test('authorityNotify is best-effort: absent config, and a failing command, neve
 
 test('CLI: a hand-crafted proposal at each authority level can be approved or rejected via the CLI wrapper', () => {
   const { name, instanceDir, dataDir } = makeTempInstance();
+  // pilot-handoff (level 2, like send-outreach) is real and side-effecting as
+  // of Phase 8 - lib/cli.js registers real executors for every level-2 type,
+  // so this generic "approve/reject/list/show across authority levels" test
+  // gives it a valid, harmless payload (a real opportunity + a throwaway
+  // target repo with a minimal valid .e3d-pilot/config.json) rather than
+  // relying on an unregistered type to silently no-op.
+  const targetRepoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'e3d-corp-pilot-target-'));
+  fs.mkdirSync(path.join(targetRepoDir, '.e3d-pilot'), { recursive: true });
+  fs.writeFileSync(
+    path.join(targetRepoDir, '.e3d-pilot', 'config.json'),
+    JSON.stringify({
+      verify: [],
+      protected_paths: [],
+      research_topics: '',
+      pr: { base_branch: 'main', draft: true, labels: [], backend: 'local' },
+      providers: { discover: 'claude', ideate: 'claude', draft: 'codex', negotiate: ['claude', 'codex'], review: 'claude' },
+      max_diff_files: 25,
+      max_diff_lines: 600
+    })
+  );
   try {
     const trigger = appendEvent(dataDir, {
       type: 'opportunity.reviewed',
@@ -476,16 +496,29 @@ test('CLI: a hand-crafted proposal at each authority level can be approved or re
       payload: {},
       correlationId: 'phase5-cli-chain'
     });
+    appendEvent(dataDir, {
+      type: 'opportunity.created',
+      source: 'role:opportunity.prospect',
+      subject: { type: 'opportunity', id: 'opp-cli-proposals' },
+      payload: {
+        id: 'opp-cli-proposals',
+        type: 'product-opportunity',
+        title: 'CLI wrapper test opportunity',
+        description: 'desc',
+        evidence: [],
+        score: null,
+        status: 'candidate',
+        sourceEventIds: [trigger.id],
+        correlationId: trigger.correlationId,
+        createdAt: trigger.occurredAt
+      },
+      causationId: trigger.id,
+      correlationId: trigger.correlationId
+    });
 
-    // pilot-handoff, not send-outreach: this test is about the generic
-    // approve/reject/list/show CLI wrapper across authority levels, not
-    // about Phase 7's real send-outreach executor (which lib/cli.js
-    // registers for every CLI invocation) - pilot-handoff is also level 2
-    // but has no real executor registered until Phase 8, so it stays a
-    // no-op here exactly as it did before Phase 7 existed.
     const { proposal: level2 } = createProposal(dataDir, {
       type: 'pilot-handoff',
-      payload: {},
+      payload: { opportunityId: 'opp-cli-proposals', targetRepo: targetRepoDir, reason: 'test' },
       proposedBy: proposedBy(),
       causationId: trigger.id,
       correlationId: trigger.correlationId
@@ -527,6 +560,7 @@ test('CLI: a hand-crafted proposal at each authority level can be approved or re
     assert.match(showOutput, /causal chain/);
   } finally {
     cleanupTempInstance(instanceDir);
+    fs.rmSync(targetRepoDir, { recursive: true, force: true });
   }
 });
 
