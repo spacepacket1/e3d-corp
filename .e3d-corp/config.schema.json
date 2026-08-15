@@ -90,6 +90,17 @@
       },
       "additionalProperties": false
     },
+    "leadWebhook": {
+      "type": "object",
+      "required": ["tokenEnvVar"],
+      "properties": {
+        "tokenEnvVar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
     "authorityNotify": {
       "type": "object",
       "properties": {
