@@ -90,6 +90,17 @@
       },
       "additionalProperties": false
     },
+    "calendar": {
+      "type": "object",
+      "required": ["provider", "calendarId", "organizerEmail", "serviceAccountKeyFileEnvVar"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "calendarId": { "type": "string", "minLength": 1 },
+        "organizerEmail": { "type": "string", "minLength": 1 },
+        "serviceAccountKeyFileEnvVar": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "leadWebhook": {
       "type": "object",
       "required": ["tokenEnvVar"],
