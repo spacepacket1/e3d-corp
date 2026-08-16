@@ -48,5 +48,9 @@
   "authorityNotify": {
     "email": "ops@example.com",
     "command": "notify-authority"
+  },
+  "anchor": {
+    "provider": "email",
+    "toEmailEnvVar": "EXAMPLECO_ANCHOR_TO_EMAIL"
   }
 }

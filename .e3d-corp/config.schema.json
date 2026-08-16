@@ -101,6 +101,15 @@
       },
       "additionalProperties": false
     },
+    "anchor": {
+      "type": "object",
+      "required": ["provider", "toEmailEnvVar"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "toEmailEnvVar": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "outreach": {
       "type": "object",
       "required": ["provider", "region", "fromEmail"],

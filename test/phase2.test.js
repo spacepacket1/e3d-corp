@@ -8,6 +8,8 @@ import { execFileSync, spawn } from 'node:child_process';
 import { appendEvent, queryEvents, eventsFilePath, verifyEventChain } from '../lib/events/store.js';
 import { reconstructChain } from '../lib/events/chain.js';
 import { computeRecordHash, sealHash } from '../lib/store/appendOnlyLog.js';
+import { publishAnchor, verifyAgainstAnchors, verifyExternalAnchor, listAnchors, computeChainHead } from '../lib/anchor/anchor.js';
+import { buildAnchorBody, resolveAnchorRecipient } from '../lib/anchor/emailTransport.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -497,6 +499,165 @@ test('adopting chaining on an existing unchained log seals the legacy prefix rat
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
+});
+
+// --- external anchors: the checks the chain cannot make about itself ---
+
+function fakeAnchorTransport() {
+  const sent = [];
+  return {
+    name: 'test',
+    destination: 'anchors@example.com',
+    sent,
+    async send(anchor) {
+      sent.push(anchor);
+      return { transport: 'test', messageId: `msg-${sent.length}` };
+    }
+  };
+}
+
+test('publishAnchor records the head and count, and the anchor event agrees with the chain', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    appendEvent(dataDir, makeEvent({ payload: { note: 'one' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'two' } }));
+
+    const before = computeChainHead(dataDir);
+    const transport = fakeAnchorTransport();
+    const published = await publishAnchor(dataDir, { instanceConfig: { name: 'testco' }, transport });
+
+    assert.equal(published.head, before.head);
+    assert.equal(published.count, 2, 'the anchor covers the log as it stood, excluding the anchor event itself');
+    assert.equal(transport.sent.length, 1);
+    assert.equal(transport.sent[0].head, before.head);
+
+    // The anchor event's own prevHash is the anchored head by construction:
+    // the anchor and the chain corroborate each other or neither is useful.
+    assert.equal(published.event.prevHash, published.head);
+
+    const anchors = listAnchors(dataDir);
+    assert.equal(anchors.length, 1);
+    assert.equal(anchors[0].head, before.head);
+    assert.equal(anchors[0].count, 2);
+    assert.equal(anchors[0].publishedTo, 'anchors@example.com');
+
+    const verified = verifyAgainstAnchors(dataDir);
+    assert.equal(verified.valid, true);
+    assert.equal(verified.anchorCount, 1);
+    assert.equal(verified.pinnedThrough, 2);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('an anchor catches a full rewrite and a truncated tail — the two failures the chain alone cannot see', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    appendEvent(dataDir, makeEvent({ payload: { note: 'one' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'two' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'three' } }));
+    await publishAnchor(dataDir, { instanceConfig: { name: 'testco' }, transport: fakeAnchorTransport() });
+
+    const pristine = readRecords(dataDir);
+
+    // A full rewrite: edit a record and recompute every hash after it, exactly
+    // what an operator with write access would do. The chain itself is happy.
+    const rewritten = pristine.map((record) => ({ ...record }));
+    rewritten[1] = { ...rewritten[1], payload: { note: 'rewritten' } };
+    let prevHash = rewritten[0].hash;
+    for (let i = 1; i < rewritten.length; i += 1) {
+      rewritten[i].prevHash = prevHash;
+      delete rewritten[i].hash;
+      rewritten[i].hash = computeRecordHash(rewritten[i]);
+      prevHash = rewritten[i].hash;
+    }
+    writeRecords(dataDir, rewritten);
+
+    assert.equal(verifyEventChain(dataDir).valid, true, 'a recomputed chain is internally self-consistent');
+
+    const rewriteCaught = verifyAgainstAnchors(dataDir);
+    assert.equal(rewriteCaught.valid, false, 'but the anchor pins what the prefix used to hash to');
+    assert.match(rewriteCaught.results[0].reason, /history at or before that point was rewritten/);
+
+    // A truncated tail: what remains is a valid prefix, so the chain passes.
+    writeRecords(dataDir, [pristine[0], pristine[1]]);
+    assert.equal(verifyEventChain(dataDir).valid, true, 'a truncated log is still a valid chain');
+
+    // The anchor event itself was cut off here, so re-publish a fresh log's
+    // worth of context is not possible — instead assert against the anchor as
+    // it was recorded, which is what an emailed copy preserves.
+    const emailedAnchor = pristine[3];
+    assert.equal(emailedAnchor.type, 'anchor.published');
+    assert.equal(emailedAnchor.payload.count, 3);
+    assert.ok(
+      readRecords(dataDir).length < emailedAnchor.payload.count,
+      'the surviving log is shorter than the anchor says it should be — detectable only against the external copy'
+    );
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('only an externally held anchor catches truncation — in-log anchors structurally cannot', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    appendEvent(dataDir, makeEvent({ payload: { note: 'one' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'two' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'three' } }));
+
+    const transport = fakeAnchorTransport();
+    await publishAnchor(dataDir, { instanceConfig: { name: 'testco' }, transport });
+    // What the operator actually has in their mailbox.
+    const emailed = { head: transport.sent[0].head, count: transport.sent[0].count };
+
+    const pristine = readRecords(dataDir);
+    assert.equal(verifyExternalAnchor(dataDir, emailed).valid, true);
+
+    // Cut the tail. The anchor event lived at the end, so it goes too.
+    writeRecords(dataDir, pristine.slice(0, 2));
+
+    assert.equal(verifyEventChain(dataDir).valid, true, 'the surviving prefix is a valid chain');
+
+    const inLog = verifyAgainstAnchors(dataDir);
+    assert.equal(inLog.anchorCount, 0, 'truncation removed the in-log anchors along with the records');
+    assert.equal(inLog.valid, true, 'so the in-log check has nothing left to fail on — it cannot see this');
+
+    // An anchor at index i covers the i records before it, so any log still
+    // holding that anchor is necessarily longer than the count it asserts.
+    // The emailed copy is the only reference that outlives the cut.
+    const external = verifyExternalAnchor(dataDir, emailed);
+    assert.equal(external.valid, false);
+    assert.equal(external.currentCount, 2);
+    assert.match(external.reason, /1 record\(s\) were removed from the end/);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('anchor email config fails closed, and the body carries no business content', () => {
+  assert.throws(() => resolveAnchorRecipient({}), /no anchor.provider "email" configured/);
+  assert.throws(
+    () => resolveAnchorRecipient({ anchor: { provider: 'email' } }),
+    /missing anchor.toEmailEnvVar/
+  );
+  assert.throws(
+    () => resolveAnchorRecipient({ anchor: { provider: 'email', toEmailEnvVar: 'E3D_CORP_TEST_UNSET_ANCHOR' } }),
+    /is not set/
+  );
+
+  const body = buildAnchorBody({
+    instanceName: 'testco',
+    head: 'a'.repeat(64),
+    count: 412,
+    publishedAt: '2026-08-16T14:00:00.000Z'
+  });
+  assert.match(body, /a{64}/);
+  assert.match(body, /412/);
+  assert.match(body, /event verify --instance testco/);
+  // The anchor is two numbers and a hash; nothing about a client or a deal
+  // may ever ride along in it.
+  assert.equal(body.includes('@'), false, 'no email addresses');
+  assert.match(body, /nothing in it identifies a client, a deal, or an amount/);
 });
 
 test('CLI: event verify reports an intact chain and exits non-zero on a broken one', () => {

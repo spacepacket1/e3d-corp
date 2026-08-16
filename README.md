@@ -112,6 +112,7 @@ One JSON file is the entire contract between e3d-corp and a company. Start from 
 | `outreach` | | `{ provider, region, fromEmail, fallbackToEmail }` for SES |
 | `web` | | `{ authUserEnvVar, authPassEnvVar, port }` |
 | `leadWebhook` | | `{ tokenEnvVar }` — bearer token for the inbound lead endpoint |
+| `anchor` | | `{ provider, toEmailEnvVar }` — where to publish the chain head |
 | `calendar` | | `{ provider, calendarId, organizerEmail, serviceAccountKeyFileEnvVar }` |
 | `authorityNotify` | | `{ email, command }` — best-effort ping when level-2+ approvals are pending |
 
@@ -227,15 +228,35 @@ Adoption needed no rewriting of existing history: the first chained record's `pr
 
 Hash chaining also makes every append a read-modify-write, so appends now take an exclusive lock. Without it, the 07:00 discovery pass and the :00 calendar poll — which genuinely overlap — could both claim the same `prevHash` and fork the chain.
 
-**What this does not do**, stated plainly:
-
-- It does not stop the operator from rewriting the whole file and recomputing every hash. Detection of *partial* edits is the guarantee; a full rewrite needs an external copy to catch.
-- It does not detect **truncation of the tail** — what remains is a valid prefix. There's a test asserting exactly this so the limit stays visible.
-- It does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
-
-Closing the first two takes an external anchor: publish the latest hash somewhere you don't control — an offsite copy, a signed commit, a timestamping service, or a chain if a counterparty ever demands one. That publishes 32 bytes and no business content, which is the only version of "put it on-chain" compatible with never letting client names and deal amounts leave the instance directory.
-
 The primitives live in [`lib/store/appendOnlyLog.js`](lib/store/appendOnlyLog.js) rather than inside the event store, so Phase 11's `ledger.jsonl` inherits the same chain instead of inventing a second one.
+
+### External anchors
+
+The chain catches partial edits. It cannot catch the two failures where someone with write access rewrites the file wholesale: recomputing every hash after an edit yields a chain that verifies cleanly, and truncating the tail leaves a valid prefix. Both are only detectable against a record of what the log looked like earlier, held somewhere the process cannot reach back into.
+
+An **anchor** is that record — the chain head plus the record count at a moment in time, published outward:
+
+```bash
+node bin/e3d-corp anchor publish
+# Anchored 412 records at 4815668f39d63b99… → chris@futco.ai
+```
+
+Two numbers and a hash. No titles, names, amounts, or evidence — nothing that could identify a client or a deal ever rides along, which is what makes anchoring compatible with the rule that real business data never leaves the instance directory.
+
+The count is what makes truncation detectable and the head is what makes rewriting detectable. `event verify` checks both, and the anchor event's own `prevHash` *is* the anchored head by construction, so the anchor and the chain corroborate each other or neither is worth trusting.
+
+**An anchor stored in the log cannot catch truncation, and structurally never will.** An anchor at index *i* covers the *i* records before it, so any log still containing it is necessarily longer than the count it asserts — cutting the tail cuts the anchors along with it. Only the copy that left the machine survives that. So the emailed anchor is the one to verify against:
+
+```bash
+node bin/e3d-corp event verify --head 4815668f39d63b99… --count 412
+# Emailed anchor verified: the first 412 of 511 records are unchanged since it was published
+```
+
+Every anchor email carries that exact command with its own values filled in, and says to run it from the message rather than from the anchors in the log. There's a test asserting the in-log check genuinely cannot see a truncation, so the limit stays visible rather than being quietly assumed away.
+
+The transport is injected rather than hard-coded, matching how the research and outreach layers take their providers — so S3 Object Lock, a signed commit, a timestamping service, or a public chain is a new `send()` and nothing else. FutCo publishes by email daily at 07:20, after the digest.
+
+**What none of this does:** it does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
 
 ## Scoring
 
@@ -271,7 +292,7 @@ Counts come from the event store; per-chain economics come from assembled Experi
 
 ## Deployment
 
-Node plus a scheduler is the whole story. The reference deployment runs the web UI under PM2 and drives everything else from cron: a nightly discovery pass, a morning HTML digest over SES, and a booking poll every 15 minutes. Wrapper scripts under `ops/run/` source the instance env file before exec'ing the relevant entry point, keeping secrets out of crontab.
+Node plus a scheduler is the whole story. The reference deployment runs the web UI under PM2 and drives everything else from cron: a nightly discovery pass, a morning HTML digest over SES, a daily anchor publish, and a booking poll every 15 minutes. Wrapper scripts under `ops/run/` source the instance env file before exec'ing the relevant entry point, keeping secrets out of crontab.
 
 There is no message queue, no external database, and no distributed event bus. At a small company's scale the thing that matters is a semantic contract and a replayable audit trail, not infrastructure.
 
@@ -286,7 +307,7 @@ npm test          # node --test
 npm run check     # syntax check + full suite
 ```
 
-Ten suites — one per implemented phase, 90 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+Ten suites — one per implemented phase, 94 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
 
 ## Status
 
