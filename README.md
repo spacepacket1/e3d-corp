@@ -155,6 +155,12 @@ node bin/e3d-corp proposals approve <id> --reason "Good fit, send it"
 node bin/e3d-corp proposals reject  <id> --reason "Wrong segment"
 ```
 
+A level-3 or level-4 proposal is only *approved* by that call — its action does not fire. The separate confirmation is its own command, which takes no `--reason`, because the deliberation already happened at approval and this step is just "yes, actually do it now":
+
+```bash
+node bin/e3d-corp proposals confirm <id>
+```
+
 Record what actually happened, then read the assembled chain:
 
 ```bash
@@ -166,7 +172,7 @@ node bin/e3d-corp evaluate report --since 2026-01-01
 
 Outcome types: `prospect.replied`, `meeting.booked`, `proposal.accepted`, `outcome.proposal.rejected`, `deal.won`, `deal.lost`, `invoice.paid`, `capability.shipped`, `customer.adopted`, `opportunity.no-value`.
 
-> The level-3/4 second confirmation step is **web-only** today. `confirmAndExecute` is implemented in the library and exposed at `POST /proposals/:id/confirm`, but has no CLI command — approving a financial or irreversible proposal from the CLI leaves it `approved` and unexecuted until confirmed in the UI.
+> Both surfaces reach the same second step: `proposals confirm` on the CLI and `POST /proposals/:id/confirm` in the web UI are thin calls into one `confirmAndExecute`. Every refusal — not approved, wrong authority level, no registered executor — is enforced there, not re-checked per surface.
 
 ## Web UI
 

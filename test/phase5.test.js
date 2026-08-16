@@ -19,6 +19,7 @@ import { getProposal } from '../lib/proposals/store.js';
 import { decideOpportunity, decideProposal, confirmAndExecute } from '../lib/decisions/decide.js';
 import { registerActionExecutor, clearActionExecutor } from '../lib/actions/registry.js';
 import { getOpportunity } from '../lib/opportunities/store.js';
+import { run } from '../lib/cli.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -616,6 +617,98 @@ test('CLI: opportunities decide transitions status and requires --status and --r
       }
     );
   } finally {
+    cleanupTempInstance(instanceDir);
+  }
+});
+
+// The CLI counterpart of Phase 6's confirm button. Both surfaces call the
+// same confirmAndExecute, so what is under test here is that the command is
+// reachable, that approving a level-3 proposal through the CLI still does
+// not fire its action, that the separate confirm invocation is what does,
+// and that every refusal confirmAndExecute owns surfaces as a non-zero exit
+// rather than being re-implemented (or softened) at the CLI layer.
+test('CLI: `proposals confirm` is the level-3/4 second step, and refuses what confirmAndExecute refuses', async () => {
+  const { name, instanceDir, dataDir } = makeTempInstance();
+
+  let invoicesFired = 0;
+  let confirmedVia = null;
+  let confirmedBy = null;
+  registerActionExecutor('issue-invoice', async (proposal, context) => {
+    assertProposalAuthorized(proposal, 'issue-invoice');
+    invoicesFired += 1;
+    confirmedVia = context.via;
+    confirmedBy = context.confirmedBy;
+    return { fired: true, proposalId: proposal.id };
+  });
+  // Overrides the real send-outreach executor lib/cli.js registers on import,
+  // so approving the level-2 proposal below cannot reach SES from a test.
+  let outreachFired = 0;
+  registerActionExecutor('send-outreach', async (proposal) => {
+    assertProposalAuthorized(proposal, 'send-outreach');
+    outreachFired += 1;
+    return { fired: true };
+  });
+
+  try {
+    assert.match(runCli(['--help']), /proposals confirm <id>/);
+
+    assert.throws(
+      () => runCli(['proposals', 'confirm']),
+      (error) => {
+        assert.match(error.stderr.toString(), /proposals confirm requires an <id>/);
+        return true;
+      }
+    );
+
+    const trigger = appendEvent(dataDir, {
+      type: 'opportunity.reviewed',
+      source: 'test',
+      subject: { type: 'opportunity', id: 'opp-cli-confirm' },
+      payload: {},
+      correlationId: 'phase5-cli-confirm-chain'
+    });
+
+    const { proposal: invoice } = createProposal(dataDir, {
+      type: 'issue-invoice',
+      payload: { amount: 2500 },
+      proposedBy: proposedBy({ role: 'finance.bookkeeper' }),
+      causationId: trigger.id,
+      correlationId: trigger.correlationId
+    });
+
+    // Confirming before approval is refused; the CLI exits non-zero.
+    assert.equal(await run(['proposals', 'confirm', invoice.id, '--instance', name]), 1);
+    assert.equal(invoicesFired, 0);
+
+    // Approving a level-3 proposal from the CLI must not fire its action.
+    assert.equal(
+      await run(['proposals', 'approve', invoice.id, '--reason', 'Invoice agreed', '--instance', name]),
+      0
+    );
+    assert.equal(getProposal(dataDir, invoice.id).status, 'approved');
+    assert.equal(invoicesFired, 0, 'approval alone never fires a level-3 action');
+
+    // The separate confirm invocation is what actually fires it.
+    assert.equal(await run(['proposals', 'confirm', invoice.id, '--instance', name]), 0);
+    assert.equal(invoicesFired, 1);
+    assert.equal(confirmedVia, 'cli', 'the executor sees which surface confirmed it');
+    assert.ok(confirmedBy, 'confirmedBy is resolved and passed through, never blank');
+
+    // A level-2 proposal already executed on approval and is refused here.
+    const { proposal: outreach } = createProposal(dataDir, {
+      type: 'send-outreach',
+      payload: {},
+      proposedBy: proposedBy(),
+      causationId: trigger.id,
+      correlationId: trigger.correlationId
+    });
+    assert.equal(await run(['proposals', 'approve', outreach.id, '--reason', 'go', '--instance', name]), 0);
+    assert.equal(outreachFired, 1, 'level-2 fires on approval');
+    assert.equal(await run(['proposals', 'confirm', outreach.id, '--instance', name]), 1);
+    assert.equal(outreachFired, 1, 'confirm never double-fires a level-2 action');
+  } finally {
+    clearActionExecutor('issue-invoice');
+    clearActionExecutor('send-outreach');
     cleanupTempInstance(instanceDir);
   }
 });
