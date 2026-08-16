@@ -5,8 +5,9 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
-import { appendEvent, queryEvents, eventsFilePath } from '../lib/events/store.js';
+import { appendEvent, queryEvents, eventsFilePath, verifyEventChain } from '../lib/events/store.js';
 import { reconstructChain } from '../lib/events/chain.js';
+import { computeRecordHash, sealHash } from '../lib/store/appendOnlyLog.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -350,6 +351,185 @@ test('concurrent event add invocations do not corrupt events.jsonl', async () =>
       ids.add(parsed.id);
     }
     assert.equal(ids.size, concurrency);
+
+    // Hash chaining turns every append into a read-modify-write, so this is
+    // also the test that the append lock holds: without it, writers would
+    // race to claim the same prevHash and fork the chain.
+    const chain = verifyEventChain(instanceDir);
+    assert.equal(chain.valid, true, chain.reason ?? '');
+    assert.equal(chain.chained, concurrency);
+  } finally {
+    fs.rmSync(instanceDir, { recursive: true, force: true });
+  }
+});
+
+// --- hash chain: tamper evidence ---
+
+function makeEvent(overrides = {}) {
+  return {
+    type: 'market.signal.detected',
+    source: 'manual',
+    subject: { type: 'market.signal.detected', id: 'sig' },
+    payload: { note: 'something' },
+    correlationId: 'chain-corr',
+    ...overrides
+  };
+}
+
+function readRecords(dataDir) {
+  return fs
+    .readFileSync(eventsFilePath(dataDir), 'utf8')
+    .trim()
+    .split('\n')
+    .map((line) => JSON.parse(line));
+}
+
+function writeRecords(dataDir, records) {
+  fs.writeFileSync(eventsFilePath(dataDir), `${records.map((r) => JSON.stringify(r)).join('\n')}\n`);
+}
+
+test('appendEvent links each record to the one before it, and the chain verifies', () => {
+  const dataDir = makeTempDataDir();
+  try {
+    const first = appendEvent(dataDir, makeEvent());
+    const second = appendEvent(dataDir, makeEvent({ payload: { note: 'another' } }));
+
+    assert.equal(first.prevHash, null, 'the first record in a fresh log has no predecessor');
+    assert.equal(first.hash, computeRecordHash(first));
+    assert.equal(second.prevHash, first.hash, 'each record commits to the one before it');
+    assert.equal(second.hash, computeRecordHash(second));
+
+    const result = verifyEventChain(dataDir);
+    assert.equal(result.valid, true);
+    assert.equal(result.total, 2);
+    assert.equal(result.chained, 2);
+    assert.equal(result.unchained, 0);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('verifyEventChain names the first altered record, and reports what a chain alone cannot catch', () => {
+  const dataDir = makeTempDataDir();
+  try {
+    appendEvent(dataDir, makeEvent({ payload: { note: 'one' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'two' } }));
+    appendEvent(dataDir, makeEvent({ payload: { note: 'three' } }));
+
+    const pristine = readRecords(dataDir);
+
+    // Editing a historical record in place: caught at that record.
+    const edited = pristine.map((record) => ({ ...record }));
+    edited[1].payload = { note: 'quietly changed' };
+    writeRecords(dataDir, edited);
+
+    const tampered = verifyEventChain(dataDir);
+    assert.equal(tampered.valid, false);
+    assert.equal(tampered.brokenAt, 1);
+    assert.match(tampered.reason, /this record's own content was altered/);
+
+    // Removing a record from the middle: caught at the record that followed it.
+    writeRecords(dataDir, [pristine[0], pristine[2]]);
+
+    const removed = verifyEventChain(dataDir);
+    assert.equal(removed.valid, false);
+    assert.equal(removed.brokenAt, 1);
+    assert.match(removed.reason, /altered or removed/);
+
+    // Truncating the tail is NOT detectable from inside the log: what remains
+    // is a valid prefix. Catching that needs an external anchor (a published
+    // digest, an offsite copy) — asserted here so the limit stays explicit
+    // rather than being assumed away.
+    writeRecords(dataDir, [pristine[0], pristine[1]]);
+    assert.equal(verifyEventChain(dataDir).valid, true);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('adopting chaining on an existing unchained log seals the legacy prefix rather than rewriting it', () => {
+  const dataDir = makeTempDataDir();
+  try {
+    // Exactly the shape appendEvent wrote before chaining existed — which is
+    // what FutCo's real 71-event log looks like today.
+    const legacy = [
+      {
+        id: 'legacy-1',
+        type: 'market.signal.detected',
+        occurredAt: '2026-01-01T00:00:00.000Z',
+        source: 'manual',
+        subject: { type: 'market.signal.detected', id: 'sig-1' },
+        payload: { note: 'before chaining' },
+        causationId: null,
+        correlationId: 'legacy-corr'
+      },
+      {
+        id: 'legacy-2',
+        type: 'evidence.gathered',
+        occurredAt: '2026-01-02T00:00:00.000Z',
+        source: 'research.webSearch',
+        subject: { type: 'research', id: 'res-1' },
+        payload: { kind: 'web-search' },
+        causationId: null,
+        correlationId: 'legacy-corr'
+      }
+    ];
+    writeRecords(dataDir, legacy);
+
+    const chained = appendEvent(dataDir, makeEvent());
+    assert.equal(chained.prevHash, sealHash(legacy), 'the first chained record seals the legacy prefix');
+
+    const result = verifyEventChain(dataDir);
+    assert.equal(result.valid, true);
+    assert.equal(result.unchained, 2);
+    assert.equal(result.chained, 1);
+
+    // The seal is what gives the untouched legacy records tamper evidence:
+    // altering one now breaks the first chained record after them.
+    const records = readRecords(dataDir);
+    records[0].payload = { note: 'rewritten history' };
+    writeRecords(dataDir, records);
+
+    const broken = verifyEventChain(dataDir);
+    assert.equal(broken.valid, false);
+    assert.equal(broken.brokenAt, 2);
+    assert.match(broken.reason, /altered or removed/);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI: event verify reports an intact chain and exits non-zero on a broken one', () => {
+  const { name, instanceDir } = setupTempInstance();
+  try {
+    for (const note of ['one', 'two']) {
+      runCli([
+        'event',
+        'add',
+        '--type',
+        'market.signal.detected',
+        '--source',
+        'manual',
+        '--payload',
+        JSON.stringify({ note }),
+        '--instance',
+        name
+      ]);
+    }
+
+    assert.match(runCli(['event', 'verify', '--instance', name]), /Event chain intact: 2 of 2/);
+
+    const records = readRecords(instanceDir);
+    records[0].payload = { note: 'tampered' };
+    writeRecords(instanceDir, records);
+
+    assert.throws(
+      () => runCli(['event', 'verify', '--instance', name]),
+      (error) => {
+        assert.match(error.stderr.toString(), /Event chain BROKEN at record 0/);
+        return true;
+      }
+    );
   } finally {
     fs.rmSync(instanceDir, { recursive: true, force: true });
   }

@@ -22,6 +22,7 @@ So e3d-corp is built the other way around. Research and scoring run continuously
 - **Never implements a decision twice.** The CLI and the web UI call the same library functions for every transition. A Decision records `via: "cli" | "web"` for traceability — that is the *only* difference between the two surfaces.
 - **Never confuses approval with success.** A Decision (a human said yes) and an Outcome (the world responded) are separate records captured at separate times. Evaluation metrics keep them apart, so "approved" never quietly counts as "worked."
 - **Never invents evidence.** Every claim traces back to an `evidence.gathered` event holding the actual query and the actual result, from the company's own knowledge base (via MCP) or a web-search adapter. Degraded providers are recorded as degraded rather than silently skipped.
+- **Never lets history be edited quietly.** Every record in the event log carries a `prevHash` linking it to its predecessor and a `hash` over its own content, so altering any past record invalidates everything written after it. `event verify` walks the chain and names the first bad record.
 - **Never commits real business data.** Instance data — prospects, findings, decisions, revenue — lives in a gitignored directory outside the tracked tree. The repo ships a placeholder example config and nothing else.
 
 ## The runtime loop
@@ -168,6 +169,7 @@ node bin/e3d-corp outcomes record --correlation <id> --type meeting.booked --pay
 node bin/e3d-corp experience show <correlationId>
 node bin/e3d-corp event log --correlation <correlationId>
 node bin/e3d-corp evaluate report --since 2026-01-01
+node bin/e3d-corp event verify
 ```
 
 Outcome types: `prospect.replied`, `meeting.booked`, `proposal.accepted`, `outcome.proposal.rejected`, `deal.won`, `deal.lost`, `invoice.paid`, `capability.shipped`, `customer.adopted`, `opportunity.no-value`.
@@ -203,6 +205,37 @@ Three inbound paths exist today, all converging on the same engine:
 - **Google Calendar bookings** — for contact forms whose call-to-action is an appointment-schedule booking rather than a form post. A poller authenticates as a service account using a hand-rolled RFC 7523 JWT bearer flow (no `googleapis` dependency), lists upcoming events, and records unseen ones as leads. Deduplication queries the event store for already-recorded Google event IDs rather than keeping a separate state file — `events.jsonl` stays the only source of truth.
 
 Adding a source means writing something that appends a well-formed event and calls `runOpportunityEngine`. The engine itself has no idea where its trigger came from.
+
+## Tamper evidence
+
+`events.jsonl` was append-only by convention — nothing structurally stopped a past record from being edited in place, which is precisely the property an audit trail is supposed to have. Every record now carries:
+
+```
+prevHash  — the hash of the record before it (null for the first, a seal for a pre-chaining prefix)
+hash      — sha256 over this record's canonical form, prevHash included
+```
+
+Because each hash covers the previous link, every record commits to the entire history behind it. Editing one record, or deleting one from the middle, invalidates every record after it:
+
+```bash
+node bin/e3d-corp event verify
+# Event chain intact: 412 of 412 records verified
+# Event chain BROKEN at record 137: record 137 (id 8a3c…) hashes to …, but carries … — this record's own content was altered
+```
+
+Adoption needed no rewriting of existing history: the first chained record's `prevHash` is a **seal** over the unchained prefix, so records written before this existed are still covered from that point forward. On FutCo's real 71-event log, altering any of those 71 breaks verification at record 71.
+
+Hash chaining also makes every append a read-modify-write, so appends now take an exclusive lock. Without it, the 07:00 discovery pass and the :00 calendar poll — which genuinely overlap — could both claim the same `prevHash` and fork the chain.
+
+**What this does not do**, stated plainly:
+
+- It does not stop the operator from rewriting the whole file and recomputing every hash. Detection of *partial* edits is the guarantee; a full rewrite needs an external copy to catch.
+- It does not detect **truncation of the tail** — what remains is a valid prefix. There's a test asserting exactly this so the limit stays visible.
+- It does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
+
+Closing the first two takes an external anchor: publish the latest hash somewhere you don't control — an offsite copy, a signed commit, a timestamping service, or a chain if a counterparty ever demands one. That publishes 32 bytes and no business content, which is the only version of "put it on-chain" compatible with never letting client names and deal amounts leave the instance directory.
+
+The primitives live in [`lib/store/appendOnlyLog.js`](lib/store/appendOnlyLog.js) rather than inside the event store, so Phase 11's `ledger.jsonl` inherits the same chain instead of inventing a second one.
 
 ## Scoring
 
@@ -253,7 +286,7 @@ npm test          # node --test
 npm run check     # syntax check + full suite
 ```
 
-Ten suites — one per implemented phase, 85 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+Ten suites — one per implemented phase, 90 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
 
 ## Status
 
