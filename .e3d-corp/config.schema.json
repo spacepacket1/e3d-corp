@@ -101,6 +101,17 @@
       },
       "additionalProperties": false
     },
+    "outreach": {
+      "type": "object",
+      "required": ["provider", "region", "fromEmail"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "region": { "type": "string", "minLength": 1 },
+        "fromEmail": { "type": "string", "minLength": 1 },
+        "fallbackToEmail": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "leadWebhook": {
       "type": "object",
       "required": ["tokenEnvVar"],

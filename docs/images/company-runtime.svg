@@ -1,0 +1,224 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Helvetica, Arial, sans-serif" role="img" aria-label="e3d-corp company runtime loop: event, opportunity and proposal run autonomously at authority levels 0 to 1; a gold human authority gate holds decision; action, outcome and experience fire only after explicit approval, and experience feeds back into the next cycle">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="35%" r="85%">
+      <stop offset="0%" stop-color="#1a1240"/>
+      <stop offset="45%" stop-color="#0b0d2e"/>
+      <stop offset="100%" stop-color="#020208"/>
+    </radialGradient>
+    <radialGradient id="nebulaCyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#37e6ff" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#37e6ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebulaMagenta" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff5ec4" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#ff5ec4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nebulaGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffc94a" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#ffc94a" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="nodeCyan" cx="35%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#d6fbff"/>
+      <stop offset="35%" stop-color="#37e6ff"/>
+      <stop offset="100%" stop-color="#0c6b8a"/>
+    </radialGradient>
+    <radialGradient id="nodeGold" cx="35%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#fff4d4"/>
+      <stop offset="35%" stop-color="#ffc94a"/>
+      <stop offset="100%" stop-color="#8a5c05"/>
+    </radialGradient>
+    <radialGradient id="nodeMagenta" cx="35%" cy="28%" r="72%">
+      <stop offset="0%" stop-color="#ffe0f6"/>
+      <stop offset="35%" stop-color="#ff5ec4"/>
+      <stop offset="100%" stop-color="#7a1e63"/>
+    </radialGradient>
+
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#37e6ff"/>
+      <stop offset="55%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ff5ec4"/>
+    </linearGradient>
+
+    <filter id="glow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="20"/>
+    </filter>
+
+    <marker id="arrowCyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#37e6ff"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ffc94a"/>
+    </marker>
+    <marker id="arrowMagenta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#ff5ec4"/>
+    </marker>
+    <marker id="arrowViolet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 Z" fill="#7d7bff"/>
+    </marker>
+
+    <!-- node glyphs, drawn in a local -12..12 coordinate space -->
+    <g id="icon-signal">
+      <circle cx="-7" cy="0" r="2.6" fill="#04222b"/>
+      <path d="M -2 -6.5 A 8.5 8.5 0 0 1 -2 6.5" fill="none" stroke="#04222b" stroke-width="2.1" stroke-linecap="round"/>
+      <path d="M 3.5 -10.5 A 13.5 13.5 0 0 1 3.5 10.5" fill="none" stroke="#04222b" stroke-width="2.1" stroke-linecap="round"/>
+    </g>
+    <g id="icon-target">
+      <circle cx="0" cy="0" r="9.2" fill="none" stroke="#04222b" stroke-width="2.1"/>
+      <circle cx="0" cy="0" r="4.3" fill="none" stroke="#04222b" stroke-width="2.1"/>
+      <circle cx="0" cy="0" r="1.5" fill="#04222b"/>
+    </g>
+    <g id="icon-doc">
+      <rect x="-7.2" y="-9.8" width="14.4" height="19.6" rx="2.2" fill="none" stroke="#04222b" stroke-width="2.1"/>
+      <line x1="-3.6" y1="-4.6" x2="3.6" y2="-4.6" stroke="#04222b" stroke-width="1.9" stroke-linecap="round"/>
+      <line x1="-3.6" y1="0" x2="3.6" y2="0" stroke="#04222b" stroke-width="1.9" stroke-linecap="round"/>
+      <line x1="-3.6" y1="4.6" x2="1" y2="4.6" stroke="#04222b" stroke-width="1.9" stroke-linecap="round"/>
+    </g>
+    <g id="icon-key">
+      <circle cx="-4.8" cy="0" r="4.8" fill="none" stroke="#3d2a02" stroke-width="2.3"/>
+      <line x1="0.2" y1="0" x2="10.2" y2="0" stroke="#3d2a02" stroke-width="2.3" stroke-linecap="round"/>
+      <line x1="6.4" y1="0" x2="6.4" y2="4.8" stroke="#3d2a02" stroke-width="2.3" stroke-linecap="round"/>
+      <line x1="9.8" y1="0" x2="9.8" y2="3.4" stroke="#3d2a02" stroke-width="2.3" stroke-linecap="round"/>
+    </g>
+    <g id="icon-send">
+      <path d="M -10.5 -1.8 L 10.5 -9.5 L 2.6 10.2 L -0.6 2.2 Z" fill="none" stroke="#3a1230" stroke-width="2.1" stroke-linejoin="round"/>
+      <line x1="-0.6" y1="2.2" x2="10.5" y2="-9.5" stroke="#3a1230" stroke-width="2.1" stroke-linecap="round"/>
+    </g>
+    <g id="icon-flag">
+      <line x1="-6.2" y1="-10" x2="-6.2" y2="10.4" stroke="#3a1230" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M -6.2 -9 L 8.6 -4.8 L -6.2 -0.6 Z" fill="none" stroke="#3a1230" stroke-width="2.1" stroke-linejoin="round"/>
+    </g>
+    <g id="icon-loop">
+      <path d="M 9.2 -1.2 A 9.2 9.2 0 1 1 4.4 -8.1" fill="none" stroke="#3a1230" stroke-width="2.3" stroke-linecap="round"/>
+      <path d="M -0.4 -9.8 L 5.2 -7.6 L 2.6 -2.4" fill="none" stroke="#3a1230" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="url(#bgGrad)"/>
+  <g filter="url(#softBlur)">
+    <circle cx="230" cy="200" r="330" fill="url(#nebulaCyan)"/>
+    <circle cx="990" cy="420" r="330" fill="url(#nebulaMagenta)"/>
+    <circle cx="600" cy="300" r="230" fill="url(#nebulaGold)"/>
+  </g>
+
+  <!-- starfield -->
+  <g fill="#ffffff">
+    <circle cx="72" cy="96" r="1.5" opacity="0.55"/>
+    <circle cx="164" cy="52" r="1.1" opacity="0.4"/>
+    <circle cx="318" cy="112" r="1.7" opacity="0.6"/>
+    <circle cx="452" cy="66" r="1.1" opacity="0.35"/>
+    <circle cx="748" cy="124" r="1.4" opacity="0.5"/>
+    <circle cx="884" cy="48" r="1.1" opacity="0.35"/>
+    <circle cx="1046" cy="104" r="1.6" opacity="0.55"/>
+    <circle cx="1148" cy="58" r="1.1" opacity="0.4"/>
+    <circle cx="46" cy="418" r="1.3" opacity="0.45"/>
+    <circle cx="118" cy="556" r="1.6" opacity="0.5"/>
+    <circle cx="286" cy="596" r="1.1" opacity="0.35"/>
+    <circle cx="536" cy="586" r="1.4" opacity="0.45"/>
+    <circle cx="838" cy="600" r="1.2" opacity="0.4"/>
+    <circle cx="1042" cy="566" r="1.6" opacity="0.5"/>
+    <circle cx="1160" cy="446" r="1.3" opacity="0.45"/>
+    <circle cx="1176" cy="300" r="1.1" opacity="0.35"/>
+    <circle cx="26" cy="262" r="1.2" opacity="0.4"/>
+  </g>
+
+  <!-- title -->
+  <text x="600" y="60" text-anchor="middle" font-size="34" font-weight="700" letter-spacing="2" fill="url(#titleGrad)">e3d-corp</text>
+  <text x="600" y="90" text-anchor="middle" font-size="13.5" letter-spacing="3.2" fill="#8be9ff" opacity="0.72">THE COMPANY RUNTIME LOOP</text>
+
+  <!-- human authority gate band -->
+  <rect x="520" y="140" width="160" height="330" rx="16" fill="#ffc94a" fill-opacity="0.07" stroke="#ffc94a" stroke-opacity="0.5" stroke-width="1.6" stroke-dasharray="7 6"/>
+  <g text-anchor="middle" fill="#ffc94a">
+    <text x="600" y="176" font-size="12" font-weight="700" letter-spacing="1.6">HUMAN AUTHORITY</text>
+    <text x="600" y="194" font-size="12" font-weight="700" letter-spacing="1.6">GATE &#183; LEVELS 2-4</text>
+    <text x="600" y="424" font-size="11" letter-spacing="0.8" opacity="0.82">LEVEL 2 &#183; FIRES ON APPROVAL</text>
+    <text x="600" y="442" font-size="11" letter-spacing="0.8" opacity="0.82">LEVEL 3-4 &#183; SECOND CONFIRMATION</text>
+  </g>
+
+  <!-- phase brackets -->
+  <path d="M 59 213 L 59 201 L 481 201 L 481 213" fill="none" stroke="#37e6ff" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="270" y="188" text-anchor="middle" font-size="12.5" font-weight="600" letter-spacing="1.8" fill="#37e6ff" opacity="0.85">AUTONOMOUS &#183; LEVELS 0-1</text>
+
+  <path d="M 719 213 L 719 201 L 1141 201 L 1141 213" fill="none" stroke="#ff5ec4" stroke-opacity="0.55" stroke-width="1.8" stroke-linecap="round"/>
+  <text x="930" y="188" text-anchor="middle" font-size="12.5" font-weight="600" letter-spacing="1.8" fill="#ff5ec4" opacity="0.85">FIRES ONLY AFTER APPROVAL</text>
+
+  <!-- connectors -->
+  <g stroke-width="2.6" stroke-linecap="round" opacity="0.9">
+    <line x1="158" y1="285" x2="209" y2="285" stroke="#37e6ff" marker-end="url(#arrowCyan)"/>
+    <line x1="323" y1="285" x2="374" y2="285" stroke="#37e6ff" marker-end="url(#arrowCyan)"/>
+    <line x1="488" y1="285" x2="539" y2="285" stroke="#ffc94a" marker-end="url(#arrowGold)"/>
+    <line x1="653" y1="285" x2="704" y2="285" stroke="#ff5ec4" marker-end="url(#arrowMagenta)"/>
+    <line x1="818" y1="285" x2="869" y2="285" stroke="#ff5ec4" marker-end="url(#arrowMagenta)"/>
+    <line x1="983" y1="285" x2="1034" y2="285" stroke="#ff5ec4" marker-end="url(#arrowMagenta)"/>
+  </g>
+
+  <!-- experience feedback arc -->
+  <path d="M 1137 285 Q 1174 285 1174 322 V 474 Q 1174 514 1134 514 H 66 Q 26 514 26 474 V 322 Q 26 285 61 285"
+        fill="none" stroke="#7d7bff" stroke-width="2.3" stroke-dasharray="9 7" opacity="0.8"
+        marker-end="url(#arrowViolet)"/>
+  <text x="600" y="546" text-anchor="middle" font-size="12.5" font-weight="600" letter-spacing="2" fill="#a9a7ff" opacity="0.9">EVERY CHAIN REPLAYS AS EXPERIENCE &#183; SIGNAL TO OUTCOME, FULLY TRACEABLE</text>
+
+  <!-- nodes -->
+  <g filter="url(#glow)" opacity="0.5">
+    <circle cx="105" cy="285" r="46" fill="#37e6ff" opacity="0.22"/>
+    <circle cx="270" cy="285" r="46" fill="#37e6ff" opacity="0.22"/>
+    <circle cx="435" cy="285" r="46" fill="#37e6ff" opacity="0.22"/>
+    <circle cx="600" cy="285" r="50" fill="#ffc94a" opacity="0.3"/>
+    <circle cx="765" cy="285" r="46" fill="#ff5ec4" opacity="0.22"/>
+    <circle cx="930" cy="285" r="46" fill="#ff5ec4" opacity="0.22"/>
+    <circle cx="1095" cy="285" r="46" fill="#ff5ec4" opacity="0.22"/>
+  </g>
+
+  <g stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.4">
+    <circle cx="105" cy="285" r="42" fill="url(#nodeCyan)"/>
+    <circle cx="270" cy="285" r="42" fill="url(#nodeCyan)"/>
+    <circle cx="435" cy="285" r="42" fill="url(#nodeCyan)"/>
+    <circle cx="765" cy="285" r="42" fill="url(#nodeMagenta)"/>
+    <circle cx="930" cy="285" r="42" fill="url(#nodeMagenta)"/>
+    <circle cx="1095" cy="285" r="42" fill="url(#nodeMagenta)"/>
+  </g>
+
+  <!-- decision node: the gate itself, ringed to stand apart -->
+  <circle cx="600" cy="285" r="47" fill="none" stroke="#ffc94a" stroke-opacity="0.6" stroke-width="1.6"/>
+  <circle cx="600" cy="285" r="42" fill="url(#nodeGold)" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.6"/>
+
+  <!-- glyphs -->
+  <g filter="url(#softGlow)">
+    <use href="#icon-signal" transform="translate(105 285) scale(1.45)"/>
+    <use href="#icon-target" transform="translate(270 285) scale(1.45)"/>
+    <use href="#icon-doc"    transform="translate(435 285) scale(1.45)"/>
+    <use href="#icon-key"    transform="translate(600 285) scale(1.45)"/>
+    <use href="#icon-send"   transform="translate(765 285) scale(1.45)"/>
+    <use href="#icon-flag"   transform="translate(930 285) scale(1.45)"/>
+    <use href="#icon-loop"   transform="translate(1095 285) scale(1.45)"/>
+  </g>
+
+  <!-- stage labels -->
+  <g font-size="19" font-weight="700" letter-spacing="1.4" text-anchor="middle" fill="#eafcff">
+    <text x="105" y="362">EVENT</text>
+    <text x="270" y="362">OPPORTUNITY</text>
+    <text x="435" y="362">PROPOSAL</text>
+    <text x="600" y="362" fill="#ffe6a8">DECISION</text>
+    <text x="765" y="362">ACTION</text>
+    <text x="930" y="362">OUTCOME</text>
+    <text x="1095" y="362">EXPERIENCE</text>
+  </g>
+
+  <!-- caption -->
+  <text x="600" y="600" text-anchor="middle" font-size="15" letter-spacing="3" fill="#8be9ff" opacity="0.75">EVIDENCE-BACKED &#183; HUMAN-GATED &#183; AI SUGGESTS, CODE DECIDES</text>
+</svg>
