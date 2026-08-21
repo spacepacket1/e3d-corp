@@ -36,7 +36,7 @@ function setupTempInstance() {
       name,
       dataDir: `.e3d-corp/instance/${name}`,
       llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
-      research: { futcoMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'example-search' },
+      research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'example-search' },
       eventSources: [],
       roles: {}
     })

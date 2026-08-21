@@ -6,7 +6,7 @@
     "modelEnvVar": "EXAMPLECO_LLM_MODEL"
   },
   "research": {
-    "futcoMcpUrl": "http://127.0.0.1:4110",
+    "knowledgeBaseMcpUrl": "http://127.0.0.1:4110",
     "webSearchProvider": "example-search",
     "webSearchApiKeyEnvVar": "EXAMPLECO_WEB_SEARCH_API_KEY"
   },

@@ -25,7 +25,11 @@ function minimalInstanceConfig(overrides = {}) {
   return {
     name: 'phase4-test',
     llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
-    research: { futcoMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
+    research: {
+      knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
+      knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
+      webSearchProvider: 'disabled'
+    },
     ...overrides
   };
 }
@@ -50,7 +54,11 @@ function makeTempInstance(extra = {}) {
         name,
         dataDir,
         llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
-        research: { futcoMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
+        research: {
+      knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
+      knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
+      webSearchProvider: 'disabled'
+    },
         eventSources: [],
         roles: { 'opportunity.prospect': { provider: 'local', model: '$LLM_MODEL' } },
         ...extra
@@ -280,7 +288,7 @@ test('runDiscoveryPass processes each research topic independently and tolerates
   }
 });
 
-test('opportunity engine grounds candidates in real futco-mcp evidence with correct causation/correlation', async () => {
+test('opportunity engine grounds candidates in real knowledge-base evidence with correct causation/correlation', async () => {
   const { instanceDir, dataDir } = makeTempInstance();
   try {
     const config = loadInstanceConfig(path.join(instanceDir, 'instance.json'));

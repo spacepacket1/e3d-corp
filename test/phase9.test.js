@@ -41,7 +41,7 @@ function makeTempInstance(extra = {}) {
     name,
     dataDir,
     llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
-    research: { futcoMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
+    research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
     eventSources: [],
     roles: {},
     ...extra
@@ -67,7 +67,7 @@ function seedFullChain(dataDir, { opportunityId = 'opp-full', correlationId = 'p
   });
   const evidence = appendEvent(dataDir, {
     type: 'evidence.gathered',
-    source: 'research.futcoMcp',
+    source: 'research.knowledgeBase',
     subject: { type: 'research', id: 'ev-1' },
     payload: { kind: 'knowledge-base-search', query: 'reporting', resultSummary: '3 matches' },
     causationId: originating.id,

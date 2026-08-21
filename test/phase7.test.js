@@ -45,7 +45,7 @@ function makeTempInstance(extra = {}) {
     name,
     dataDir,
     llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
-    research: { futcoMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
+    research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
     eventSources: [],
     roles: { 'opportunity.communicator': { provider: 'local', model: 'test-model' } },
     ...extra

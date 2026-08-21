@@ -30,9 +30,13 @@
     },
     "research": {
       "type": "object",
-      "required": ["futcoMcpUrl", "webSearchProvider"],
+      "required": ["webSearchProvider"],
       "properties": {
-        "futcoMcpUrl": {
+        "knowledgeBaseMcpUrl": {
+          "type": "string",
+          "minLength": 1
+        },
+        "knowledgeBaseMcpServerPath": {
           "type": "string",
           "minLength": 1
         },

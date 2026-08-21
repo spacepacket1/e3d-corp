@@ -104,7 +104,7 @@ One JSON file is the entire contract between e3d-corp and a company. Start from 
 | `name` | ✓ | Instance name; selects the config under `.e3d-corp/instance/<name>/` |
 | `dataDir` | ✓ | Private, gitignored directory holding this instance's real data |
 | `llm` | ✓ | `{ baseUrlEnvVar, modelEnvVar }` — *names* of env vars, never values |
-| `research` | ✓ | `{ futcoMcpUrl, webSearchProvider, webSearchApiKeyEnvVar }` |
+| `research` | ✓ | `{ knowledgeBaseMcpUrl, webSearchProvider, webSearchApiKeyEnvVar }` |
 | `eventSources` | ✓ | Declared inbound signal sources |
 | `roles` | ✓ | Role name → `{ provider, model }`; models are assigned, not hard-coded |
 | `researchTopics` | | Topics the scheduled discovery pass sweeps |
@@ -224,7 +224,7 @@ node bin/e3d-corp event verify
 # Event chain BROKEN at record 137: record 137 (id 8a3c…) hashes to …, but carries … — this record's own content was altered
 ```
 
-Adoption needed no rewriting of existing history: the first chained record's `prevHash` is a **seal** over the unchained prefix, so records written before this existed are still covered from that point forward. On FutCo's real 71-event log, altering any of those 71 breaks verification at record 71.
+Adoption needed no rewriting of existing history: the first chained record's `prevHash` is a **seal** over the unchained prefix, so records written before this existed are still covered from that point forward. On a real instance's event log at the point chaining was adopted, altering any record from before that point still breaks verification at the same record it always would have.
 
 Hash chaining also makes every append a read-modify-write, so appends now take an exclusive lock. Without it, the 07:00 discovery pass and the :00 calendar poll — which genuinely overlap — could both claim the same `prevHash` and fork the chain.
 
@@ -238,7 +238,7 @@ An **anchor** is that record — the chain head plus the record count at a momen
 
 ```bash
 node bin/e3d-corp anchor publish
-# Anchored 412 records at 4815668f39d63b99… → chris@futco.ai
+# Anchored 412 records at 4815668f39d63b99… → ops@yourcompany.example
 ```
 
 Two numbers and a hash. No titles, names, amounts, or evidence — nothing that could identify a client or a deal ever rides along, which is what makes anchoring compatible with the rule that real business data never leaves the instance directory.
@@ -254,7 +254,7 @@ node bin/e3d-corp event verify --head 4815668f39d63b99… --count 412
 
 Every anchor email carries that exact command with its own values filled in, and says to run it from the message rather than from the anchors in the log. There's a test asserting the in-log check genuinely cannot see a truncation, so the limit stays visible rather than being quietly assumed away.
 
-The transport is injected rather than hard-coded, matching how the research and outreach layers take their providers — so S3 Object Lock, a signed commit, a timestamping service, or a public chain is a new `send()` and nothing else. FutCo publishes by email daily at 07:20, after the digest.
+The transport is injected rather than hard-coded, matching how the research and outreach layers take their providers — so S3 Object Lock, a signed commit, a timestamping service, or a public chain is a new `send()` and nothing else. The reference deployment publishes daily by email, after the digest.
 
 **What none of this does:** it does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
 

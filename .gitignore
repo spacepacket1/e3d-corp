@@ -1,3 +1,5 @@
 .env
 node_modules/
 .e3d-corp/instance/
+.codex-spec-runner/summaries/
+.codex-spec-runner/context.md

@@ -11,7 +11,7 @@ import { loadInstanceConfig, loadInstance } from '../lib/config.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-function makeTempInstance({ futcoMcpUrl, webSearchProvider, webSearchApiKeyEnvVar }) {
+function makeTempInstance({ knowledgeBaseMcpUrl, knowledgeBaseMcpServerPath, webSearchProvider, webSearchApiKeyEnvVar }) {
   const name = `phase3-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const instanceDir = path.join(ROOT, '.e3d-corp', 'instance', name);
   fs.mkdirSync(instanceDir, { recursive: true });
@@ -23,7 +23,8 @@ function makeTempInstance({ futcoMcpUrl, webSearchProvider, webSearchApiKeyEnvVa
         dataDir: `.e3d-corp/instance/${name}`,
         llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
         research: {
-          futcoMcpUrl,
+          knowledgeBaseMcpUrl,
+          ...(knowledgeBaseMcpServerPath ? { knowledgeBaseMcpServerPath } : {}),
           webSearchProvider,
           ...(webSearchApiKeyEnvVar ? { webSearchApiKeyEnvVar } : {})
         },
@@ -58,9 +59,10 @@ test('futco instance config declares the e3d-applied lead-capture source', () =>
   assert.equal(config.eventSources[0].type, 'lead-capture');
 });
 
-test('research adapter returns real FutCo knowledge-base results and appends evidence', async () => {
+test('research adapter returns real knowledge-base results and appends evidence', async () => {
   const { name, instanceDir } = makeTempInstance({
-    futcoMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
     webSearchProvider: 'disabled'
   });
 
@@ -101,7 +103,8 @@ test('research adapter returns real FutCo knowledge-base results and appends evi
 
 test('research adapter parses repo info and records evidence for the repo lookup', async () => {
   const { name, instanceDir } = makeTempInstance({
-    futcoMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
     webSearchProvider: 'disabled'
   });
 
@@ -156,7 +159,7 @@ test('web search uses the configured provider and appends evidence', async () =>
     );
   };
   const { name, instanceDir } = makeTempInstance({
-    futcoMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
     webSearchProvider: fixtureUrl
   });
 
@@ -211,7 +214,7 @@ test('web search includes the configured API key from the referenced env var', a
     );
   };
   const { name, instanceDir } = makeTempInstance({
-    futcoMcpUrl: 'http://127.0.0.1:4110',
+    knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
     webSearchProvider: fixtureUrl,
     webSearchApiKeyEnvVar: envVar
   });
@@ -249,7 +252,7 @@ test('web search includes the configured API key from the referenced env var', a
 
 test('research adapter returns documented unavailable results when providers are unreachable', async () => {
   const { name, instanceDir } = makeTempInstance({
-    futcoMcpUrl: 'http://127.0.0.1:1',
+    knowledgeBaseMcpUrl: 'http://127.0.0.1:1',
     webSearchProvider: 'disabled'
   });
 
