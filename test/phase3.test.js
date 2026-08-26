@@ -21,7 +21,11 @@ function makeTempInstance({ knowledgeBaseMcpUrl, knowledgeBaseMcpServerPath, web
       {
         name,
         dataDir: `.e3d-corp/instance/${name}`,
-        llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+        llm: {
+          providers: {
+            local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+          }
+        },
         research: {
           knowledgeBaseMcpUrl,
           ...(knowledgeBaseMcpServerPath ? { knowledgeBaseMcpServerPath } : {}),

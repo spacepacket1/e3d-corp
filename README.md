@@ -1,5 +1,7 @@
 # e3d-corp
 
+Public repo: [github.com/spacepacket1/e3d-corp](https://github.com/spacepacket1/e3d-corp)
+
 **e3d-corp decides what a company should do next: it gathers real evidence, turns it into scored opportunities, drafts proposals for the ones worth acting on, and refuses to touch the outside world until a human explicitly approves.**
 
 ![e3d-corp's company runtime loop: event, opportunity and proposal run autonomously at authority levels 0-1, a gold human authority gate holds decision, and action, outcome and experience fire only after explicit approval, with experience feeding back into the next cycle](docs/images/company-runtime.svg)

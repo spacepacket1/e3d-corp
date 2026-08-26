@@ -10,6 +10,13 @@ import { reconstructChain } from '../lib/events/chain.js';
 import { computeRecordHash, sealHash } from '../lib/store/appendOnlyLog.js';
 import { publishAnchor, verifyAgainstAnchors, verifyExternalAnchor, listAnchors, computeChainHead } from '../lib/anchor/anchor.js';
 import { buildAnchorBody, resolveAnchorRecipient } from '../lib/anchor/emailTransport.js';
+import {
+  RESERVED_TOKENS_BY_PROVIDER_KIND,
+  computeBudgetStatus,
+  reserveBudget,
+  settleReservation
+} from '../lib/llm/budget.js';
+import { validateInstanceConfig } from '../lib/config.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -35,13 +42,47 @@ function setupTempInstance() {
     JSON.stringify({
       name,
       dataDir: `.e3d-corp/instance/${name}`,
-      llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+      llm: {
+        providers: {
+          local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+        }
+      },
       research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'example-search' },
       eventSources: [],
       roles: {}
     })
   );
   return { name, instanceDir };
+}
+
+function isoUtcDay(offsetDays, hour = 12) {
+  const now = new Date();
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offsetDays, hour, 0, 0, 0)
+  ).toISOString();
+}
+
+function makeBudgetConfig(overrides = {}) {
+  return {
+    name: 'budget-test',
+    dataDir: '.e3d-corp/instance/budget-test',
+    llm: {
+      providers: {
+        grok: { kind: 'grok-cli' },
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      },
+      budget: {
+        period: 'daily',
+        limits: {
+          grok: { tokens: 1000 }
+        }
+      }
+    },
+    research: { webSearchProvider: 'disabled' },
+    eventSources: [],
+    roles: {},
+    ...overrides
+  };
 }
 
 // --- lib/events/store.js ---
@@ -148,6 +189,288 @@ test('queryEvents filters by type, correlationId, and since', () => {
   assert.equal(queryEvents(dataDir, { type: 'a' }).length, 2);
   assert.equal(queryEvents(dataDir, { correlationId: 'c1' }).length, 2);
   assert.equal(queryEvents(dataDir, { since: '2026-02-15T00:00:00.000Z' }).length, 1);
+});
+
+test('validateInstanceConfig accepts llm.budget and rejects unsupported period or unknown budget providers', () => {
+  const valid = validateInstanceConfig(makeBudgetConfig());
+  assert.equal(valid.valid, true);
+
+  const badPeriod = validateInstanceConfig(
+    makeBudgetConfig({
+      llm: {
+        providers: {
+          grok: { kind: 'grok-cli' }
+        },
+        budget: {
+          period: 'weekly',
+          limits: {
+            grok: { tokens: 1000 }
+          }
+        }
+      }
+    })
+  );
+  assert.equal(badPeriod.valid, false);
+  assert.ok(badPeriod.errors.some((error) => error.includes('llm.budget.period')));
+
+  const unknownProvider = validateInstanceConfig(
+    makeBudgetConfig({
+      llm: {
+        providers: {
+          grok: { kind: 'grok-cli' }
+        },
+        budget: {
+          period: 'daily',
+          limits: {
+            hosted: { tokens: 1000 }
+          }
+        }
+      }
+    })
+  );
+  assert.equal(unknownProvider.valid, false);
+  assert.ok(unknownProvider.errors.some((error) => error.includes('references unknown provider "hosted"')));
+});
+
+test('computeBudgetStatus reports settled spend, outstanding reservations, non-negative remaining, and UTC day boundaries', async () => {
+  const dataDir = makeTempDataDir();
+  const config = makeBudgetConfig();
+  try {
+    appendEvent(dataDir, {
+      type: 'role.provider.completed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        usage: { promptTokens: 400, completionTokens: 300, totalTokens: 700 },
+        costUsd: null
+      },
+      correlationId: 'phase2-budget-settled',
+      occurredAt: isoUtcDay(0, 10)
+    });
+
+    let status = computeBudgetStatus(dataDir, config, 'grok');
+    assert.equal(status.remaining, 300);
+    assert.equal(status.settled, 700);
+    assert.equal(status.outstanding, 0);
+
+    appendEvent(dataDir, {
+      type: 'role.provider.failed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        usage: { promptTokens: 200, completionTokens: 300, totalTokens: 500 },
+        costUsd: null,
+        reason: 'invalid JSON'
+      },
+      correlationId: 'phase2-budget-over-limit',
+      occurredAt: isoUtcDay(0, 11)
+    });
+
+    status = computeBudgetStatus(dataDir, config, 'grok');
+    assert.equal(status.settled, 1200);
+    assert.equal(status.remaining, 0);
+
+    const reservationId = 'phase2-outstanding';
+    appendEvent(dataDir, {
+      type: 'role.provider.reserved',
+      source: 'llm.budget',
+      subject: { type: 'provider', id: 'grok' },
+      payload: {
+        role: null,
+        provider: 'grok',
+        reservationId,
+        estimatedTokens: 500
+      },
+      correlationId: reservationId,
+      occurredAt: isoUtcDay(0, 12)
+    });
+
+    const cleanDir = makeTempDataDir();
+    try {
+      appendEvent(cleanDir, {
+        type: 'role.provider.reserved',
+        source: 'llm.budget',
+        subject: { type: 'provider', id: 'grok' },
+        payload: {
+          role: null,
+          provider: 'grok',
+          reservationId,
+          estimatedTokens: 500
+        },
+        correlationId: reservationId,
+        occurredAt: isoUtcDay(0, 12)
+      });
+      const outstandingOnly = computeBudgetStatus(cleanDir, config, 'grok');
+      assert.equal(outstandingOnly.settled, 0);
+      assert.equal(outstandingOnly.outstanding, 500);
+      assert.equal(outstandingOnly.remaining, 500);
+
+      appendEvent(cleanDir, {
+        type: 'role.provider.completed',
+        source: 'role:test',
+        subject: { type: 'role', id: 'opportunity.prospect' },
+        payload: {
+          role: 'opportunity.prospect',
+          provider: 'grok',
+          model: 'grok-cli-default',
+          reservationId,
+          usage: { promptTokens: 300, completionTokens: 200, totalTokens: 500 },
+          costUsd: null
+        },
+        correlationId: reservationId,
+        occurredAt: isoUtcDay(0, 13)
+      });
+      const settledReservation = computeBudgetStatus(cleanDir, config, 'grok');
+      assert.equal(settledReservation.outstanding, 0);
+      assert.equal(settledReservation.settled, 500);
+      assert.equal(settledReservation.remaining, 500);
+    } finally {
+      fs.rmSync(cleanDir, { recursive: true, force: true });
+    }
+
+    appendEvent(dataDir, {
+      type: 'role.provider.completed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        usage: { promptTokens: 900, completionTokens: 100, totalTokens: 1000 },
+        costUsd: null
+      },
+      correlationId: 'phase2-budget-yesterday',
+      occurredAt: isoUtcDay(-1, 23)
+    });
+    status = computeBudgetStatus(dataDir, config, 'grok');
+    assert.equal(status.settled, 1200);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('reserveBudget is lock-safe under concurrency and unlimited providers always grant', async () => {
+  const dataDir = makeTempDataDir();
+  const config = makeBudgetConfig();
+  const estimatedTokens = RESERVED_TOKENS_BY_PROVIDER_KIND['grok-cli'];
+  try {
+    appendEvent(dataDir, {
+      type: 'role.provider.completed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        usage: { promptTokens: 300, completionTokens: 200, totalTokens: 500 },
+        costUsd: null
+      },
+      correlationId: 'phase2-reserve-existing',
+      occurredAt: isoUtcDay(0, 9)
+    });
+
+    const results = await Promise.allSettled([
+      reserveBudget(dataDir, config, 'grok'),
+      reserveBudget(dataDir, config, 'grok')
+    ]);
+
+    const fulfilled = results.filter((result) => result.status === 'fulfilled').map((result) => result.value);
+    assert.equal(fulfilled.length, 2);
+    assert.equal(fulfilled.filter((result) => result.granted === true).length, 1);
+    assert.equal(fulfilled.filter((result) => result.granted === false).length, 1);
+
+    const reservedEvents = queryEvents(dataDir, { type: 'role.provider.reserved' });
+    assert.equal(reservedEvents.length, 1);
+    assert.equal(reservedEvents[0].payload.estimatedTokens, estimatedTokens);
+
+    const unlimited = await reserveBudget(dataDir, config, 'local');
+    assert.equal(unlimited.granted, true);
+
+    const unlimitedStatus = computeBudgetStatus(dataDir, config, 'local');
+    assert.deepEqual(unlimitedStatus, { provider: 'local', unlimited: true });
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('settleReservation records the settled provider event and budget status reflects the settled tokens', async () => {
+  const dataDir = makeTempDataDir();
+  const config = makeBudgetConfig();
+  try {
+    const reservation = await reserveBudget(dataDir, config, 'grok');
+    assert.equal(reservation.granted, true);
+
+    await settleReservation(dataDir, {
+      type: 'role.provider.completed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        reservationId: reservation.reservationId,
+        usage: { promptTokens: 250, completionTokens: 150, totalTokens: 400 },
+        costUsd: null
+      },
+      correlationId: reservation.reservationId
+    });
+
+    const completions = queryEvents(dataDir, { type: 'role.provider.completed' });
+    assert.equal(completions.length, 1);
+    assert.equal(completions[0].payload.reservationId, reservation.reservationId);
+
+    const status = computeBudgetStatus(dataDir, config, 'grok');
+    assert.equal(status.settled, 400);
+    assert.equal(status.outstanding, 0);
+    assert.equal(status.remaining, 600);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI: budget status renders computeBudgetStatus numbers for configured providers', () => {
+  const { name, instanceDir } = setupTempInstance();
+  const dataDir = path.join(ROOT, '.e3d-corp', 'instance', name);
+  const configPath = path.join(instanceDir, 'instance.json');
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.llm.providers.grok = { kind: 'grok-cli' };
+    config.llm.budget = {
+      period: 'daily',
+      limits: {
+        grok: { tokens: 1000 }
+      }
+    };
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    appendEvent(dataDir, {
+      type: 'role.provider.completed',
+      source: 'role:test',
+      subject: { type: 'role', id: 'opportunity.prospect' },
+      payload: {
+        role: 'opportunity.prospect',
+        provider: 'grok',
+        model: 'grok-cli-default',
+        usage: { promptTokens: 400, completionTokens: 300, totalTokens: 700 },
+        costUsd: null
+      },
+      correlationId: 'phase2-cli-budget',
+      occurredAt: isoUtcDay(0, 10)
+    });
+
+    const direct = computeBudgetStatus(dataDir, config, 'grok');
+    const output = runCli(['budget', 'status', '--instance', name]);
+    assert.match(output, new RegExp(`grok: spent=${direct.settled} allocated=${direct.limit} outstanding=${direct.outstanding} remaining=${direct.remaining}`));
+    assert.match(output, new RegExp(`period: ${direct.periodStart} to ${direct.periodEnd}`));
+  } finally {
+    fs.rmSync(instanceDir, { recursive: true, force: true });
+  }
 });
 
 // --- lib/events/chain.js ---

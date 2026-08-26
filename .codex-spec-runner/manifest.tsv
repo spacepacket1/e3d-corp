@@ -8,3 +8,12 @@
 2026-08-14T13:15:00-0700	docs/build-e3d-corp.md	8	e3d-pilot Handoff Contract	claude	sonnet	exec	0	0
 2026-08-14T14:10:00-0700	docs/build-e3d-corp.md	9	Outcome Capture and Experience Log	claude	sonnet	exec	0	0
 2026-08-14T15:00:00-0700	docs/build-e3d-corp.md	10	Evaluation and Metrics	claude	sonnet	exec	0	0
+2026-08-22T06:21:45-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	1	0
+2026-08-22T06:21:49-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	0	0
+2026-08-22T06:35:40-0700	docs/build-multi-provider-roles.md	2	Multi-Provider Fan-Out for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-22T06:41:08-0700	docs/build-multi-provider-roles.md	3	Multi-Provider Fan-Out for `opportunity.communicator`	codex	gpt-5.4	exec	0	0
+2026-08-23T08:02:24-0700	docs/build-llm-budget.md	1	Real Usage/Cost Capture on Every Provider Call	codex	gpt-5.4	exec	0	0
+2026-08-23T08:09:06-0700	docs/build-llm-budget.md	2	Event-Sourced Budget Ledger, Config, and Reporting	codex	gpt-5.4	exec	0	0
+2026-08-23T08:15:52-0700	docs/build-llm-budget.md	3	Boss-Signaled, Budget-Gated Elective Second Opinions for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:36:44-0700	docs/build-prospect-quality.md	1	Self-Exclusion Filtering, `counterparty`, and `pursuable`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:42:45-0700	docs/build-prospect-quality.md	2	Surface Pursuable and Counterparty in the CLI and Web UI	codex	gpt-5.4	exec	0	0

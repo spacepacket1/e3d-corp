@@ -47,7 +47,11 @@ function makeTempInstance(extra = {}) {
       {
         name,
         dataDir,
-        llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+        llm: {
+          providers: {
+            local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+          }
+        },
         research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
         eventSources: [],
         roles: {},

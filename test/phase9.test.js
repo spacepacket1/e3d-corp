@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -40,7 +40,11 @@ function makeTempInstance(extra = {}) {
   const config = {
     name,
     dataDir,
-    llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      }
+    },
     research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
     eventSources: [],
     roles: {},
@@ -52,6 +56,42 @@ function makeTempInstance(extra = {}) {
 
 function cleanupTempInstance(instance) {
   fs.rmSync(instance.instanceDir, { recursive: true, force: true });
+}
+
+async function invokeRequest(listener, urlPath, { method = 'GET', headers = {}, body } = {}) {
+  const req = new PassThrough();
+  req.method = method;
+  req.url = urlPath;
+  req.headers = Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
+  if (body) req.write(body);
+  req.end();
+
+  let responseBody = '';
+  let resolveDone;
+  const done = new Promise((resolve) => {
+    resolveDone = resolve;
+  });
+  const res = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) {
+      this.headers[name.toLowerCase()] = value;
+    },
+    writeHead(statusCode, headersToSet = {}) {
+      this.statusCode = statusCode;
+      for (const [name, value] of Object.entries(headersToSet)) {
+        this.headers[name.toLowerCase()] = value;
+      }
+    },
+    end(chunk = '') {
+      responseBody += chunk;
+      resolveDone();
+    }
+  };
+
+  await listener(req, res);
+  await done;
+  return { statusCode: res.statusCode, headers: res.headers, body: responseBody };
 }
 
 // Builds a full, real Event -> Opportunity -> Proposal -> Decision -> Action
@@ -272,7 +312,6 @@ test('outcomes record against a real chain from Phase 7 (a sent outreach) correc
   })();
   registerActionExecutor('send-outreach', executor);
 
-  let server;
   try {
     const { correlationId } = seedFullChain(instance.dataDir, { opportunityId: 'opp-cli-outcome', correlationId: 'phase9-cli-outcome' });
 
@@ -293,30 +332,20 @@ test('outcomes record against a real chain from Phase 7 (a sent outreach) correc
 
     // Record a second, different outcome via the web UI, same correlationId.
     const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
-    server = http.createServer(listener);
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address();
     const auth = `Basic ${Buffer.from('chris:secret').toString('base64')}`;
 
-    function request(urlPath, opts = {}) {
-      return new Promise((resolve, reject) => {
-        const req = http.request(
-          `http://127.0.0.1:${port}${urlPath}`,
-          { method: opts.method ?? 'GET', headers: { Authorization: auth, ...(opts.headers ?? {}) } },
-          (res) => {
-            const chunks = [];
-            res.on('data', (c) => chunks.push(c));
-            res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }));
-          }
-        );
-        req.on('error', reject);
-        if (opts.body) req.write(opts.body);
-        req.end();
+    const request = (urlPath, opts = {}) =>
+      invokeRequest(listener, urlPath, {
+        method: opts.method ?? 'GET',
+        headers: { Authorization: auth, ...(opts.headers ?? {}) },
+        body: opts.body
       });
-    }
 
     const getRes = await request('/opportunities/opp-cli-outcome');
-    const cookieToken = (getRes.headers['set-cookie'] ?? []).join(';').match(/e3d_csrf=([0-9a-f]+)/)[1];
+    const cookieHeader = Array.isArray(getRes.headers['set-cookie'])
+      ? getRes.headers['set-cookie'].join(';')
+      : String(getRes.headers['set-cookie'] ?? '');
+    const cookieToken = cookieHeader.match(/e3d_csrf=([0-9a-f]+)/)[1];
     const formToken = getRes.body.match(/name="_csrf" value="([0-9a-f]+)"/)[1];
 
     const body = new URLSearchParams({ type: 'deal.won', payload: JSON.stringify({ amount: 900 }), _csrf: formToken }).toString();
@@ -342,7 +371,6 @@ test('outcomes record against a real chain from Phase 7 (a sent outreach) correc
     assert.match(outcomesListRes.body, /meeting\.booked/);
     assert.match(outcomesListRes.body, /deal\.won/);
   } finally {
-    if (server) server.close();
     clearActionExecutor('send-outreach');
     delete process.env.PHASE9_WEB_USER;
     delete process.env.PHASE9_WEB_PASS;

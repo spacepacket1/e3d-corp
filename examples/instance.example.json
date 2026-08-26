@@ -2,8 +2,13 @@
   "name": "exampleco",
   "dataDir": ".e3d-corp/instance/exampleco",
   "llm": {
-    "baseUrlEnvVar": "EXAMPLECO_LLM_BASE_URL",
-    "modelEnvVar": "EXAMPLECO_LLM_MODEL"
+    "providers": {
+      "local": {
+        "kind": "local",
+        "baseUrlEnvVar": "EXAMPLECO_LLM_BASE_URL",
+        "modelEnvVar": "EXAMPLECO_LLM_MODEL"
+      }
+    }
   },
   "research": {
     "knowledgeBaseMcpUrl": "http://127.0.0.1:4110",
@@ -13,12 +18,10 @@
   "eventSources": [],
   "roles": {
     "opportunity.prospect": {
-      "provider": "local",
-      "model": "$LLM_MODEL"
+      "provider": "local"
     },
     "opportunity.communicator": {
-      "provider": "local",
-      "model": "$LLM_MODEL"
+      "provider": "local"
     }
   },
   "outreach": {
@@ -29,6 +32,9 @@
   },
   "researchTopics": [
     "domains or trends worth a scheduled discovery pass, e.g. \"AI utilities for technical businesses\""
+  ],
+  "ownDomains": [
+    "example.com"
   ],
   "scoring": {
     "weights": {

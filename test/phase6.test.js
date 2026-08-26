@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -36,7 +36,11 @@ function makeTempInstance({ web, envVars } = {}) {
   const config = {
     name,
     dataDir,
-    llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      }
+    },
     research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
     eventSources: [],
     roles: {}
@@ -88,44 +92,44 @@ function fakeActionExecutor(type) {
   return { executor, callCount: () => calls };
 }
 
-function startEphemeralServer({ config, dataDir }) {
-  const listener = createRequestListener({ config, dataDir });
-  const server = http.createServer(listener);
-  return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', () => resolve(server));
-  });
-}
-
-function baseUrl(server) {
-  const { port } = server.address();
-  return `http://127.0.0.1:${port}`;
-}
-
 function basicAuthHeader(user, pass) {
   return `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
 }
 
-function httpRequest(url, { method = 'GET', headers = {}, body } = {}) {
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      url,
-      { method, headers },
-      (res) => {
-        const chunks = [];
-        res.on('data', (chunk) => chunks.push(chunk));
-        res.on('end', () => {
-          resolve({
-            statusCode: res.statusCode,
-            headers: res.headers,
-            body: Buffer.concat(chunks).toString('utf8')
-          });
-        });
-      }
-    );
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
+async function invokeRequest(listener, { url, method = 'GET', headers = {}, body } = {}) {
+  const req = new PassThrough();
+  req.method = method;
+  req.url = url;
+  req.headers = Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
+  if (body) req.write(body);
+  req.end();
+
+  let responseBody = '';
+  let resolveDone;
+  const done = new Promise((resolve) => {
+    resolveDone = resolve;
   });
+  const res = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) {
+      this.headers[name.toLowerCase()] = value;
+    },
+    writeHead(statusCode, headersToSet = {}) {
+      this.statusCode = statusCode;
+      for (const [name, value] of Object.entries(headersToSet)) {
+        this.headers[name.toLowerCase()] = value;
+      }
+    },
+    end(chunk = '') {
+      responseBody += chunk;
+      resolveDone();
+    }
+  };
+
+  await listener(req, res);
+  await done;
+  return { statusCode: res.statusCode, headers: res.headers, body: responseBody };
 }
 
 function extractCsrfCookie(setCookieHeaders) {
@@ -197,7 +201,6 @@ test('GET /opportunities/:id renders a causal chain identical in content to `opp
     web: { authUserEnvVar: 'PHASE6_CHAIN_USER', authPassEnvVar: 'PHASE6_CHAIN_PASS', port: 3999 },
     envVars: { PHASE6_CHAIN_USER: 'chris', PHASE6_CHAIN_PASS: 'secret' }
   });
-  let server;
   try {
     const trigger = appendEvent(instance.dataDir, {
       type: 'lead.received',
@@ -236,8 +239,9 @@ test('GET /opportunities/:id renders a causal chain identical in content to `opp
 
     const cliOutput = runCli(['opportunities', 'show', 'opp-web-chain', '--instance', instance.name]);
 
-    server = await startEphemeralServer({ config: instance.config, dataDir: instance.dataDir });
-    const res = await httpRequest(`${baseUrl(server)}/opportunities/opp-web-chain`, {
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
+    const res = await invokeRequest(listener, {
+      url: '/opportunities/opp-web-chain',
       headers: { Authorization: basicAuthHeader('chris', 'secret') }
     });
 
@@ -261,7 +265,130 @@ test('GET /opportunities/:id renders a causal chain identical in content to `opp
       assert.ok(res.body.includes(eventType));
     }
   } finally {
-    if (server) server.close();
+    cleanupTempInstance(instance);
+  }
+});
+
+test('GET /opportunities and /opportunities/:id render pursuable state and counterparty details for current and historical records', async () => {
+  const instance = makeTempInstance({
+    web: { authUserEnvVar: 'PHASE6_PURSUABLE_USER', authPassEnvVar: 'PHASE6_PURSUABLE_PASS', port: 3999 },
+    envVars: { PHASE6_PURSUABLE_USER: 'chris', PHASE6_PURSUABLE_PASS: 'secret' }
+  });
+  try {
+    const fixtures = [
+      {
+        id: 'opp-web-pursuable',
+        correlationId: 'phase6-web-pursuable',
+        title: 'Pursuable web opportunity',
+        type: 'consulting-engagement',
+        score: 0.4,
+        pursuable: true,
+        counterparty: { kind: 'company', name: 'BuyerCo', contactHint: 'VP Operations named in evidence' }
+      },
+      {
+        id: 'opp-web-missing',
+        correlationId: 'phase6-web-missing',
+        title: 'Historical web opportunity',
+        type: 'market-trend',
+        score: 0.95
+      },
+      {
+        id: 'opp-web-intel',
+        correlationId: 'phase6-web-intel',
+        title: 'Intel-only web opportunity',
+        type: 'market-trend',
+        score: 0.7,
+        pursuable: false,
+        counterparty: { kind: 'none', name: null, contactHint: null }
+      }
+    ];
+
+    for (const fixture of fixtures) {
+      const trigger = appendEvent(instance.dataDir, {
+        type: 'lead.received',
+        source: 'e3d-applied',
+        subject: { type: 'lead', id: `lead-${fixture.id}` },
+        payload: {},
+        correlationId: fixture.correlationId
+      });
+      const createdPayload = {
+        id: fixture.id,
+        type: fixture.type,
+        title: fixture.title,
+        description: `${fixture.id} description`,
+        evidence: [],
+        score: null,
+        status: 'candidate',
+        sourceEventIds: [trigger.id],
+        correlationId: fixture.correlationId,
+        createdAt: trigger.occurredAt
+      };
+      if ('pursuable' in fixture) {
+        createdPayload.pursuable = fixture.pursuable;
+      }
+      if ('counterparty' in fixture) {
+        createdPayload.counterparty = fixture.counterparty;
+      }
+      const created = appendEvent(instance.dataDir, {
+        type: 'opportunity.created',
+        source: 'role:opportunity.prospect',
+        subject: { type: 'opportunity', id: fixture.id },
+        payload: createdPayload,
+        causationId: trigger.id,
+        correlationId: fixture.correlationId
+      });
+      appendEvent(instance.dataDir, {
+        type: 'opportunity.scored',
+        source: 'opportunity.engine',
+        subject: { type: 'opportunity', id: fixture.id },
+        payload: {
+          id: fixture.id,
+          score: { value: fixture.score, rationale: `${fixture.id} rationale` },
+          status: 'scored'
+        },
+        causationId: created.id,
+        correlationId: fixture.correlationId
+      });
+    }
+
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
+    const auth = { Authorization: basicAuthHeader('chris', 'secret') };
+
+    const listRes = await invokeRequest(listener, {
+      url: '/opportunities',
+      headers: auth
+    });
+    assert.equal(listRes.statusCode, 200);
+    assert.ok(listRes.body.includes('opp-web-pursuable'));
+    assert.ok(listRes.body.indexOf('opp-web-pursuable') < listRes.body.indexOf('opp-web-missing'));
+    assert.ok(listRes.body.indexOf('opp-web-missing') < listRes.body.indexOf('opp-web-intel'));
+    assert.ok(listRes.body.includes('pursuable'));
+    assert.ok(listRes.body.includes('intelligence-only'));
+    assert.ok(listRes.body.includes('BuyerCo'));
+    assert.ok(listRes.body.includes('unknown (predates this field)'));
+    assert.ok(listRes.body.includes('none'));
+
+    const pursuableRes = await invokeRequest(listener, {
+      url: '/opportunities/opp-web-pursuable',
+      headers: auth
+    });
+    assert.equal(pursuableRes.statusCode, 200);
+    assert.ok(pursuableRes.body.includes('kind=company, name=BuyerCo, contactHint=VP Operations named in evidence'));
+
+    const missingRes = await invokeRequest(listener, {
+      url: '/opportunities/opp-web-missing',
+      headers: auth
+    });
+    assert.equal(missingRes.statusCode, 200);
+    assert.ok(missingRes.body.includes('unknown (predates this field)'));
+
+    const intelRes = await invokeRequest(listener, {
+      url: '/opportunities/opp-web-intel',
+      headers: auth
+    });
+    assert.equal(intelRes.statusCode, 200);
+    assert.ok(intelRes.body.includes('kind=none, name=null, contactHint=null'));
+  } finally {
     cleanupTempInstance(instance);
   }
 });
@@ -273,7 +400,6 @@ test('approving a level-2 proposal via the web form fires the action exactly onc
   });
   const { executor, callCount } = fakeActionExecutor('send-outreach');
   registerActionExecutor('send-outreach', executor);
-  let server;
   try {
     const trigger = appendEvent(instance.dataDir, {
       type: 'opportunity.reviewed',
@@ -290,16 +416,17 @@ test('approving a level-2 proposal via the web form fires the action exactly onc
       correlationId: trigger.correlationId
     });
 
-    server = await startEphemeralServer({ config: instance.config, dataDir: instance.dataDir });
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
     const auth = basicAuthHeader('chris', 'secret');
 
-    const getRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}`, { headers: { Authorization: auth } });
+    const getRes = await invokeRequest(listener, { url: `/proposals/${proposal.id}`, headers: { Authorization: auth } });
     const cookieToken = extractCsrfCookie(getRes.headers['set-cookie']);
     const formToken = extractCsrfField(getRes.body);
     assert.ok(cookieToken && formToken && cookieToken === formToken);
 
     const body = new URLSearchParams({ reason: 'Good fit, send it', _csrf: formToken }).toString();
-    const postRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}/approve`, {
+    const postRes = await invokeRequest(listener, {
+      url: `/proposals/${proposal.id}/approve`,
       method: 'POST',
       headers: {
         Authorization: auth,
@@ -315,7 +442,6 @@ test('approving a level-2 proposal via the web form fires the action exactly onc
     assert.equal(getProposal(instance.dataDir, proposal.id).status, 'approved');
     assert.ok(postRes.body.includes('Action executed'));
   } finally {
-    if (server) server.close();
     clearActionExecutor('send-outreach');
     cleanupTempInstance(instance);
   }
@@ -328,7 +454,6 @@ test('single-step approve on a level-3/4 proposal via the web form does not fire
   });
   const { executor, callCount } = fakeActionExecutor('issue-invoice');
   registerActionExecutor('issue-invoice', executor);
-  let server;
   try {
     const trigger = appendEvent(instance.dataDir, {
       type: 'opportunity.reviewed',
@@ -345,15 +470,16 @@ test('single-step approve on a level-3/4 proposal via the web form does not fire
       correlationId: trigger.correlationId
     });
 
-    server = await startEphemeralServer({ config: instance.config, dataDir: instance.dataDir });
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
     const auth = basicAuthHeader('chris', 'secret');
 
-    const getRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}`, { headers: { Authorization: auth } });
+    const getRes = await invokeRequest(listener, { url: `/proposals/${proposal.id}`, headers: { Authorization: auth } });
     const cookieToken = extractCsrfCookie(getRes.headers['set-cookie']);
     const formToken = extractCsrfField(getRes.body);
 
     const approveBody = new URLSearchParams({ reason: 'ok to invoice', _csrf: formToken }).toString();
-    const approveRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}/approve`, {
+    const approveRes = await invokeRequest(listener, {
+      url: `/proposals/${proposal.id}/approve`,
       method: 'POST',
       headers: {
         Authorization: auth,
@@ -373,7 +499,8 @@ test('single-step approve on a level-3/4 proposal via the web form does not fire
     const confirmCookieToken = extractCsrfCookie(approveRes.headers['set-cookie']) ?? cookieToken;
     const confirmFormToken = extractCsrfField(approveRes.body) ?? formToken;
     const confirmBody = new URLSearchParams({ _csrf: confirmFormToken }).toString();
-    const confirmRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}/confirm`, {
+    const confirmRes = await invokeRequest(listener, {
+      url: `/proposals/${proposal.id}/confirm`,
       method: 'POST',
       headers: {
         Authorization: auth,
@@ -387,7 +514,6 @@ test('single-step approve on a level-3/4 proposal via the web form does not fire
     assert.equal(confirmRes.statusCode, 200);
     assert.equal(callCount(), 1, 'the separate confirm step is what actually fires the action');
   } finally {
-    if (server) server.close();
     clearActionExecutor('issue-invoice');
     cleanupTempInstance(instance);
   }
@@ -400,7 +526,6 @@ test('a CSRF-forged POST (no valid same-site cookie) to a mutating route is reje
   });
   const { executor, callCount } = fakeActionExecutor('send-outreach');
   registerActionExecutor('send-outreach', executor);
-  let server;
   try {
     const trigger = appendEvent(instance.dataDir, {
       type: 'opportunity.reviewed',
@@ -417,14 +542,15 @@ test('a CSRF-forged POST (no valid same-site cookie) to a mutating route is reje
       correlationId: trigger.correlationId
     });
 
-    server = await startEphemeralServer({ config: instance.config, dataDir: instance.dataDir });
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
     const auth = basicAuthHeader('chris', 'secret');
 
     // Forged: attacker knows (or guesses) nothing about the CSRF cookie and
     // sends no Cookie header at all - exactly what a real cross-site forged
     // POST would look like, since SameSite=Strict never attaches it.
     const body = new URLSearchParams({ reason: 'forged', _csrf: 'attacker-guessed-token' }).toString();
-    const res = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}/approve`, {
+    const res = await invokeRequest(listener, {
+      url: `/proposals/${proposal.id}/approve`,
       method: 'POST',
       headers: {
         Authorization: auth,
@@ -439,7 +565,8 @@ test('a CSRF-forged POST (no valid same-site cookie) to a mutating route is reje
     assert.equal(getProposal(instance.dataDir, proposal.id).status, 'pending');
 
     // Mismatched cookie/token pair is rejected too.
-    const mismatchRes = await httpRequest(`${baseUrl(server)}/proposals/${proposal.id}/approve`, {
+    const mismatchRes = await invokeRequest(listener, {
+      url: `/proposals/${proposal.id}/approve`,
       method: 'POST',
       headers: {
         Authorization: auth,
@@ -453,7 +580,6 @@ test('a CSRF-forged POST (no valid same-site cookie) to a mutating route is reje
     assert.equal(callCount(), 0);
     assert.equal(getProposal(instance.dataDir, proposal.id).status, 'pending');
   } finally {
-    if (server) server.close();
     clearActionExecutor('send-outreach');
     cleanupTempInstance(instance);
   }
@@ -464,24 +590,24 @@ test('requests without valid basic auth are rejected with 401', async () => {
     web: { authUserEnvVar: 'PHASE6_AUTH_USER', authPassEnvVar: 'PHASE6_AUTH_PASS', port: 3999 },
     envVars: { PHASE6_AUTH_USER: 'chris', PHASE6_AUTH_PASS: 'secret' }
   });
-  let server;
   try {
-    server = await startEphemeralServer({ config: instance.config, dataDir: instance.dataDir });
+    const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
 
-    const noAuthRes = await httpRequest(`${baseUrl(server)}/opportunities`);
+    const noAuthRes = await invokeRequest(listener, { url: '/opportunities' });
     assert.equal(noAuthRes.statusCode, 401);
 
-    const wrongAuthRes = await httpRequest(`${baseUrl(server)}/opportunities`, {
+    const wrongAuthRes = await invokeRequest(listener, {
+      url: '/opportunities',
       headers: { Authorization: basicAuthHeader('chris', 'wrong-password') }
     });
     assert.equal(wrongAuthRes.statusCode, 401);
 
-    const correctAuthRes = await httpRequest(`${baseUrl(server)}/opportunities`, {
+    const correctAuthRes = await invokeRequest(listener, {
+      url: '/opportunities',
       headers: { Authorization: basicAuthHeader('chris', 'secret') }
     });
     assert.equal(correctAuthRes.statusCode, 200);
   } finally {
-    if (server) server.close();
     cleanupTempInstance(instance);
   }
 });

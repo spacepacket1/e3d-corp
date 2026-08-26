@@ -1,0 +1,64 @@
+{
+  "verify": [
+    "npm install && npm run check"
+  ],
+  "protected_paths": [
+    "LICENSE",
+    ".github/workflows/**",
+    ".env*",
+    ".e3d-corp/**",
+    "ecosystem.config.cjs",
+    "ops/**"
+  ],
+  "research_topics": "company-runtime automation for evidence-backed opportunities, proposals, decisions, and outcomes; signal-to-action pipelines; calendar/outreach integrations",
+  "pr": {
+    "base_branch": "main",
+    "draft": true,
+    "labels": [
+      "e3d-pilot"
+    ],
+    "backend": "auto"
+  },
+  "providers": {
+    "discover": [
+      "grok-build",
+      "claude",
+      "codex",
+      "devin"
+    ],
+    "ideate": [
+      "grok-build",
+      "claude",
+      "codex",
+      "devin"
+    ],
+    "draft": "codex",
+    "negotiate": [
+      "grok-build",
+      "claude",
+      "codex",
+      "devin",
+      "local"
+    ],
+    "review": [
+      "grok-build",
+      "claude",
+      "codex",
+      "devin"
+    ],
+    "execute": "csr"
+  },
+  "max_diff_files": 20,
+  "max_diff_lines": 700,
+  "approval": {
+    "implementation_required": true,
+    "merge_required": true
+  },
+  "tracking": {
+    "project_url": "https://github.com/users/spacepacket1/projects/1"
+  },
+  "candidate_scoring": {
+    "provider": "grok-build",
+    "workers": 3
+  }
+}

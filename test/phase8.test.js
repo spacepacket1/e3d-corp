@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { appendEvent, queryEvents } from '../lib/events/store.js';
@@ -49,7 +49,11 @@ function makeTempInstance(extra = {}) {
   const config = {
     name,
     dataDir,
-    llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      }
+    },
     research: {
       knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
       knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
@@ -65,6 +69,42 @@ function makeTempInstance(extra = {}) {
 
 function cleanupTempInstance(instance) {
   fs.rmSync(instance.instanceDir, { recursive: true, force: true });
+}
+
+async function invokeRequest(listener, urlPath, { method = 'GET', headers = {}, body } = {}) {
+  const req = new PassThrough();
+  req.method = method;
+  req.url = urlPath;
+  req.headers = Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
+  if (body) req.write(body);
+  req.end();
+
+  let responseBody = '';
+  let resolveDone;
+  const done = new Promise((resolve) => {
+    resolveDone = resolve;
+  });
+  const res = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) {
+      this.headers[name.toLowerCase()] = value;
+    },
+    writeHead(statusCode, headersToSet = {}) {
+      this.statusCode = statusCode;
+      for (const [name, value] of Object.entries(headersToSet)) {
+        this.headers[name.toLowerCase()] = value;
+      }
+    },
+    end(chunk = '') {
+      responseBody += chunk;
+      resolveDone();
+    }
+  };
+
+  await listener(req, res);
+  await done;
+  return { statusCode: res.statusCode, headers: res.headers, body: responseBody };
 }
 
 function proposedBy(overrides = {}) {
@@ -352,35 +392,24 @@ test('a hand-crafted product-opportunity marked pursuing: proposing and approvin
   process.env.PHASE8_WEB_PASS = 'secret';
   const targetRepo = makeTempTargetRepo();
   registerActionExecutor('pilot-handoff', pilotHandoff);
-  let server;
   try {
     const { opportunity } = seedPursuingProductOpportunity(instance.dataDir, { opportunityId: 'opp-web-handoff' });
 
     const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
-    server = http.createServer(listener);
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address();
     const auth = `Basic ${Buffer.from('chris:secret').toString('base64')}`;
 
-    function request(urlPath, opts = {}) {
-      return new Promise((resolve, reject) => {
-        const req = http.request(
-          `http://127.0.0.1:${port}${urlPath}`,
-          { method: opts.method ?? 'GET', headers: { Authorization: auth, ...(opts.headers ?? {}) } },
-          (res) => {
-            const chunks = [];
-            res.on('data', (c) => chunks.push(c));
-            res.on('end', () => resolve({ statusCode: res.statusCode, headers: res.headers, body: Buffer.concat(chunks).toString('utf8') }));
-          }
-        );
-        req.on('error', reject);
-        if (opts.body) req.write(opts.body);
-        req.end();
+    const request = (urlPath, opts = {}) =>
+      invokeRequest(listener, urlPath, {
+        method: opts.method ?? 'GET',
+        headers: { Authorization: auth, ...(opts.headers ?? {}) },
+        body: opts.body
       });
-    }
 
     const getRes = await request(`/opportunities/${opportunity.id}`);
-    const cookieMatch = (getRes.headers['set-cookie'] ?? []).join(';').match(/e3d_csrf=([0-9a-f]+)/);
+    const cookieHeader = Array.isArray(getRes.headers['set-cookie'])
+      ? getRes.headers['set-cookie'].join(';')
+      : String(getRes.headers['set-cookie'] ?? '');
+    const cookieMatch = cookieHeader.match(/e3d_csrf=([0-9a-f]+)/);
     const fieldMatch = getRes.body.match(/name="_csrf" value="([0-9a-f]+)"/);
     const csrfToken = cookieMatch[1];
     assert.equal(fieldMatch[1], csrfToken);
@@ -397,7 +426,10 @@ test('a hand-crafted product-opportunity marked pursuing: proposing and approvin
     const proposalId = proposalIdMatch[1];
 
     const proposalGetRes = await request(`/proposals/${proposalId}`);
-    const approveCookieMatch = (proposalGetRes.headers['set-cookie'] ?? []).join(';').match(/e3d_csrf=([0-9a-f]+)/);
+    const approveCookieHeader = Array.isArray(proposalGetRes.headers['set-cookie'])
+      ? proposalGetRes.headers['set-cookie'].join(';')
+      : String(proposalGetRes.headers['set-cookie'] ?? '');
+    const approveCookieMatch = approveCookieHeader.match(/e3d_csrf=([0-9a-f]+)/);
     const approveFieldMatch = proposalGetRes.body.match(/name="_csrf" value="([0-9a-f]+)"/);
     const approveCsrf = approveCookieMatch ? approveCookieMatch[1] : csrfToken;
     assert.equal(approveFieldMatch[1], approveCsrf);
@@ -420,7 +452,6 @@ test('a hand-crafted product-opportunity marked pursuing: proposing and approvin
     const config = JSON.parse(fs.readFileSync(path.join(targetRepo, '.e3d-pilot', 'config.json'), 'utf8'));
     assert.ok(config.research_topics.includes('A self-serve export feature'));
   } finally {
-    if (server) server.close();
     clearActionExecutor('pilot-handoff');
     delete process.env.PHASE8_WEB_USER;
     delete process.env.PHASE8_WEB_PASS;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -12,6 +12,7 @@ import { recordOutcome } from '../lib/outcomes/record.js';
 import { computeMetrics, formatMetricsReport, POSITIVE_OUTCOME_TYPES } from '../lib/evaluation/metrics.js';
 import { loadInstance } from '../lib/config.js';
 import { createRequestListener } from '../lib/web/server.js';
+import { computeBudgetStatus } from '../lib/llm/budget.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -36,7 +37,11 @@ function makeTempInstance(extra = {}) {
   const config = {
     name,
     dataDir,
-    llm: { baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' },
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      }
+    },
     research: { knowledgeBaseMcpUrl: 'http://127.0.0.1:4110', webSearchProvider: 'disabled' },
     eventSources: [],
     roles: {},
@@ -48,6 +53,41 @@ function makeTempInstance(extra = {}) {
 
 function cleanupTempInstance(instance) {
   fs.rmSync(instance.instanceDir, { recursive: true, force: true });
+}
+
+async function invokeGet(listener, url, headers = {}) {
+  const req = new PassThrough();
+  req.method = 'GET';
+  req.url = url;
+  req.headers = Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
+  req.end();
+
+  let body = '';
+  let resolveDone;
+  const done = new Promise((resolve) => {
+    resolveDone = resolve;
+  });
+  const res = {
+    statusCode: 200,
+    headers: {},
+    setHeader(name, value) {
+      this.headers[name.toLowerCase()] = value;
+    },
+    writeHead(statusCode, headersToSet = {}) {
+      this.statusCode = statusCode;
+      for (const [name, value] of Object.entries(headersToSet)) {
+        this.headers[name.toLowerCase()] = value;
+      }
+    },
+    end(chunk = '') {
+      body += chunk;
+      resolveDone();
+    }
+  };
+
+  await listener(req, res);
+  await done;
+  return { statusCode: res.statusCode, body, headers: res.headers };
 }
 
 function seedOpportunity(dataDir, { id, type, correlationId, decision }) {
@@ -105,6 +145,62 @@ function seedFixture(dataDir) {
   seedOpportunity(dataDir, { id: 'opp-1', type: 'consulting-engagement', correlationId: chain1, decision: 'pursuing' });
   seedOpportunity(dataDir, { id: 'opp-2', type: 'consulting-engagement', correlationId: chain2, decision: 'pursuing' });
   seedOpportunity(dataDir, { id: 'opp-3', type: 'product-opportunity', correlationId: chain3, decision: 'no-value' });
+
+  appendEvent(dataDir, {
+    type: 'role.provider.completed',
+    source: 'role:opportunity.communicator',
+    subject: { type: 'role', id: 'opportunity.communicator' },
+    payload: {
+      role: 'opportunity.communicator',
+      provider: 'local',
+      model: 'qwen2.5',
+      usage: { promptTokens: 100, completionTokens: 30, totalTokens: 130 },
+      costUsd: 0.25,
+      latencyMs: 1200
+    },
+    correlationId: chain1
+  });
+  appendEvent(dataDir, {
+    type: 'role.provider.completed',
+    source: 'role:opportunity.communicator',
+    subject: { type: 'role', id: 'opportunity.communicator' },
+    payload: {
+      role: 'opportunity.communicator',
+      provider: 'local',
+      model: 'qwen2.5',
+      usage: { promptTokens: 90, completionTokens: 20, totalTokens: 110 },
+      costUsd: 0.15,
+      latencyMs: 800
+    },
+    correlationId: chain2
+  });
+  appendEvent(dataDir, {
+    type: 'role.provider.failed',
+    source: 'role:opportunity.communicator',
+    subject: { type: 'role', id: 'opportunity.communicator' },
+    payload: {
+      role: 'opportunity.communicator',
+      provider: 'local',
+      model: 'qwen2.5',
+      usage: null,
+      costUsd: null,
+      latencyMs: 200,
+      reason: 'LLM request timed out after 50ms'
+    },
+    correlationId: chain2
+  });
+  appendEvent(dataDir, {
+    type: 'role.provider.reserved',
+    source: 'llm.budget',
+    subject: { type: 'provider', id: 'local' },
+    payload: {
+      role: 'opportunity.communicator',
+      provider: 'local',
+      reservationId: 'phase10-local-outstanding',
+      estimatedTokens: 40
+    },
+    correlationId: 'phase10-local-outstanding'
+  });
 
   // Chain 1: approved proposal, fired outreach, full positive outcome funnel.
   const { proposal: proposal1 } = createProposal(dataDir, {
@@ -198,12 +294,11 @@ test('computeMetrics against a fixture with a known mix of outcomes matches hand
     // Chain 1 recorded 4 outcomes over time (append-only); the latest
     // snapshot's outcome is invoice.paid (positive) - counted once, not 4x.
     assert.equal(metrics.usefulOpportunityCount, 1);
-    // No cost tracking exists anywhere yet - honestly null, never fabricated.
-    assert.equal(metrics.costPerUsefulOpportunity, null);
-    assert.deepEqual(metrics.costByRoleModel, {});
+    assert.equal(metrics.costPerUsefulOpportunity, 0.25);
+    assert.deepEqual(metrics.costByRoleModel, { 'opportunity.communicator:local:qwen2.5': 0.2 });
 
     assert.ok('opportunity.communicator:local:qwen2.5' in metrics.latencyByRoleModel);
-    assert.equal(typeof metrics.latencyByRoleModel['opportunity.communicator:local:qwen2.5'], 'number');
+    assert.equal(metrics.latencyByRoleModel['opportunity.communicator:local:qwen2.5'], (1200 + 800 + 200) / 3);
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
@@ -235,14 +330,31 @@ test('formatMetricsReport renders human-readable rates and honestly reports "no 
 });
 
 test('CLI: evaluate report renders the same fixture metrics as computeMetrics', () => {
-  const instance = makeTempInstance();
+  const instance = makeTempInstance({
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      },
+      budget: {
+        period: 'daily',
+        limits: {
+          local: { tokens: 500 }
+        }
+      }
+    }
+  });
   try {
     seedFixture(instance.dataDir);
+    const direct = computeBudgetStatus(instance.dataDir, instance.config, 'local');
     const output = runCli(['evaluate', 'report', '--instance', instance.name]);
     assert.match(output, /Opportunities discovered: 3/);
     assert.match(output, /pursuing=2 no-value=1/);
     assert.match(output, /approved=1 rejected=1/);
     assert.match(output, /Revenue attributable: 500/);
+    assert.match(
+      output,
+      new RegExp(`local: spent=${direct.settled} allocated=${direct.limit} outstanding=${direct.outstanding} remaining=${direct.remaining}`)
+    );
   } finally {
     cleanupTempInstance(instance);
   }
@@ -250,40 +362,63 @@ test('CLI: evaluate report renders the same fixture metrics as computeMetrics', 
 
 test('web /metrics renders the same fixture metrics as computeMetrics', async () => {
   const instance = makeTempInstance({
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      },
+      budget: {
+        period: 'daily',
+        limits: {
+          local: { tokens: 500 }
+        }
+      }
+    },
     web: { authUserEnvVar: 'PHASE10_WEB_USER', authPassEnvVar: 'PHASE10_WEB_PASS', port: 3999 }
   });
   process.env.PHASE10_WEB_USER = 'chris';
   process.env.PHASE10_WEB_PASS = 'secret';
-  let server;
   try {
     seedFixture(instance.dataDir);
     const listener = createRequestListener({ config: instance.config, dataDir: instance.dataDir });
-    server = http.createServer(listener);
-    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-    const { port } = server.address();
-
-    const res = await new Promise((resolve, reject) => {
-      const req = http.request(
-        `http://127.0.0.1:${port}/metrics`,
-        { headers: { Authorization: `Basic ${Buffer.from('chris:secret').toString('base64')}` } },
-        (r) => {
-          const chunks = [];
-          r.on('data', (c) => chunks.push(c));
-          r.on('end', () => resolve({ statusCode: r.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
-        }
-      );
-      req.on('error', reject);
-      req.end();
+    const direct = computeBudgetStatus(instance.dataDir, instance.config, 'local');
+    const res = await invokeGet(listener, '/metrics', {
+      authorization: `Basic ${Buffer.from('chris:secret').toString('base64')}`
     });
 
     assert.equal(res.statusCode, 200);
     assert.match(res.body, /Total: 3/);
     assert.match(res.body, /pursuing=2 no-value=1/);
     assert.match(res.body, /Revenue attributable: 500/);
+    assert.match(
+      res.body,
+      new RegExp(`local: spent=${direct.settled} allocated=${direct.limit} outstanding=${direct.outstanding} remaining=${direct.remaining}`)
+    );
   } finally {
-    if (server) server.close();
     delete process.env.PHASE10_WEB_USER;
     delete process.env.PHASE10_WEB_PASS;
+    cleanupTempInstance(instance);
+  }
+});
+
+test('computeMetrics includes the same budget status objects computeBudgetStatus returns directly', () => {
+  const instance = makeTempInstance({
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      },
+      budget: {
+        period: 'daily',
+        limits: {
+          local: { tokens: 500 }
+        }
+      }
+    }
+  });
+  try {
+    seedFixture(instance.dataDir);
+    const metrics = computeMetrics(instance.dataDir, { instanceConfig: instance.config });
+    assert.deepEqual(metrics.budget, [computeBudgetStatus(instance.dataDir, instance.config, 'local')]);
+  } finally {
     cleanupTempInstance(instance);
   }
 });
