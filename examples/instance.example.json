@@ -20,6 +20,9 @@
     "opportunity.prospect": {
       "provider": "local"
     },
+    "opportunity.investing": {
+      "provider": "local"
+    },
     "opportunity.communicator": {
       "provider": "local"
     }
@@ -29,6 +32,16 @@
     "region": "us-east-1",
     "fromEmail": "outreach@example.com",
     "fallbackToEmail": "hello@example.com"
+  },
+  "e3dTrade": {
+    "baseUrl": "http://127.0.0.1:3001",
+    "mandatePath": "/api/mandates/capital",
+    "apiKeyEnvVar": "EXAMPLECO_E3D_TRADE_API_KEY",
+    "timeoutMs": 5000,
+    "maxAttempts": 3
+  },
+  "tradeOutcomeWebhook": {
+    "tokenEnvVar": "EXAMPLECO_E3D_TRADE_OUTCOME_TOKEN"
   },
   "researchTopics": [
     "domains or trends worth a scheduled discovery pass, e.g. \"AI utilities for technical businesses\""

@@ -86,6 +86,7 @@ async function fakeActionExecutor(type) {
 test('authority policy: known action types map to documented levels; unknown types fail closed', () => {
   assert.equal(getRequiredAuthorityLevel('send-outreach'), AUTHORITY_LEVELS.EXTERNAL_ACTION);
   assert.equal(getRequiredAuthorityLevel('pilot-handoff'), AUTHORITY_LEVELS.EXTERNAL_ACTION);
+  assert.equal(getRequiredAuthorityLevel('capital_mandate'), AUTHORITY_LEVELS.FINANCIAL_ACTION);
   assert.equal(getRequiredAuthorityLevel('issue-invoice'), AUTHORITY_LEVELS.FINANCIAL_ACTION);
   assert.equal(getRequiredAuthorityLevel('mark-deal-closed'), AUTHORITY_LEVELS.IRREVERSIBLE_ACTION);
   assert.throws(() => getRequiredAuthorityLevel('not-a-real-action'), /No authority policy defined/);
@@ -119,7 +120,7 @@ test('assertProposalAuthorized refuses a pending proposal and passes an approved
     assert.throws(() => assertProposalAuthorized(proposal, 'issue-invoice'), /expected "issue-invoice"/);
     assert.throws(
       () => assertProposalAuthorized({ ...proposal, status: 'approved', authorityLevel: 3 }, 'send-outreach'),
-      /policy v1 requires 2/
+      /policy v2 requires 2/
     );
 
     const approved = { ...proposal, status: 'approved' };
