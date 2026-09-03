@@ -93,6 +93,9 @@ This keeps every change scoped to new, product-specific code — nothing shared 
 
 ## Open items to flag back to Chris before/during this phase group
 
-- Confirm the exact shape of `instanceConfig`'s webhook-token config keys (`stressEvaluationWebhook.tokenEnvVar`) matches how `leadWebhook`/`tradeOutcomeWebhook` are actually wired in the deployed config, not just the code — check the real (gitignored) instance config, not just the schema, before finalizing Phase 1's env var name.
+**Resolved 2026-09-03**: timestamp/replay protection on the `e3d-corp` ↔ `e3d` calls — confirmed deferred to V1, keep the current API-key pattern.
+
+Still open:
+
+- Confirm the exact shape of `instanceConfig`'s webhook-token config keys (`stressEvaluationWebhook.tokenEnvVar`) matches how `leadWebhook`/`tradeOutcomeWebhook` are actually wired in the deployed config, not just the code — check the real (gitignored) instance config, not just the schema.
 - Reviewer-correction UX (Phase 2) is scoped minimally here (a separate correction event plus a plain form) — if Chris wants a richer review experience later, that's a V1 UI investment, not blocking for V0.
-- Whether to add timestamp/replay protection on top of the API-key pattern for the `e3d-corp` ↔ `e3d` calls (Phase 3) now or defer it — real security hardening, not free, worth a deliberate call rather than either silently skipping it or silently adding scope.

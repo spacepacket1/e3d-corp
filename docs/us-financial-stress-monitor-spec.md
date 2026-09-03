@@ -414,16 +414,15 @@ Resolved in this revision (previously open in draft v1): dashboard presentation 
 
 **Resolved while writing the per-repo specs** (§25): `e3d-corp` does expose an authenticated HTTP intake surface today — `lib/web/server.js` already has two working webhook routes (`/webhooks/e3d-applied-lead`, `/webhooks/e3d-trade-outcomes`), both bearer-token authenticated via `lib/web/auth.js`. The `e3d-corp` per-repo spec adds a third, `/webhooks/financial-stress-evaluation`, following that exact existing pattern rather than inventing a queue-based alternative. Cross-repo signed-request specifics (previously open item 3) are also resolved there: inbound reuses the existing bearer-token webhook pattern; outbound (the release call) is modeled directly on `lib/trade/client.js`'s existing header-auth/retry/timeout shape, not a new scheme.
 
+**Resolved 2026-09-03**, after the three per-repo specs were built, verified, and committed: evaluation cadence (confirmed, keep the shipped 6-hour default), XLM sourcing (confirmed, dropped from V0), disagreement threshold (confirmed, keep the shipped ≥1.0 default), cross-repo auth hardening (confirmed deferred to V1), and `claude-cli`/`openai-deep-research` provider scoping (confirmed acceptable as built — focused per-product clients, not a full registry port). `emailNotifier.js`'s live-send status was checked directly against e3d.ai's production `.env` and `journalctl` history: confirmed it has never sent anything live; doesn't affect the shipped design since `outboxWorker.js`/`publishDelivery.js`/`server/newsletterMailer.js` were built as new senders on the same proven SES infrastructure, not extensions of `emailNotifier.js`.
+
 Still open:
 
-1. **XLM price sourcing** — build a provider or scope out of V0 (§18); the `e3d` per-repo spec recommends dropping it from V0's tracked-asset set, pending Chris's confirmation.
-2. **Per-channel degraded-narrative policy** (§8.5) — which channels can publish with Stage 1/2 data only and no Stage 3 prose (dashboard: probably yes) versus which should never send without real narrative (email/newsletter: probably no) isn't finalized.
-3. **Newsletter issue entity's minimum shape** — this spec deliberately doesn't over-design it (§15); needs just enough schema to avoid colliding with the daily E3D newsletter, decided during ticket-writing.
-4. **Assumption**: Chris will remain the sole human reviewer for V0 — no multi-reviewer/approval-queue UX is in scope.
-5. **Assumption**: `o3-deep-research`/`o4-mini-deep-research` pricing and "tens of minutes" latency are acceptable for a roughly-hourly-or-less-frequent evaluation cadence; exact cadence is not yet decided and should be set based on cost, not just news-cycle speed. The `e3d` per-repo spec ships a default (every 6 hours, configurable) as a starting point, not a considered final answer.
-6. **Disagreement threshold** — the numeric delta between Stage 1 and Stage 2 scores that triggers Stage 2b escalation and full-detail surfacing (§8.2, §8.4) isn't set; the `e3d` per-repo spec ships a default of ≥1.0 on the 1–10 scale, tune once there's real dual-model history.
-7. **`claude-cli`/`openai-deep-research` provider kinds** — the `e3d` per-repo spec builds these as focused per-product clients rather than a full port of `e3d-corp`'s generic `lib/llm/registry.js`, matching its call shape for future consistency. Confirm this scoping is acceptable rather than wanting the fuller registry ported now.
-8. **Deterministic short-alert template vs. LLM-written alert text** (§8.3) — worth prototyping both before committing, since it affects Stage 3's role and cost.
+1. **Per-channel degraded-narrative policy** (§8.5) — which channels can publish with Stage 1/2 data only and no Stage 3 prose (dashboard: probably yes) versus which should never send without real narrative (email/newsletter: probably no) isn't explicitly reconfirmed against the built implementation.
+2. **Newsletter issue entity's minimum shape** — this spec deliberately doesn't over-design it (§15); the built implementation (`buildDB/writeFinancialStressNewsletter.js`) resolves this in practice, not re-audited against this open item specifically.
+3. **Assumption**: Chris will remain the sole human reviewer for V0 — no multi-reviewer/approval-queue UX is in scope.
+4. **Deterministic short-alert template vs. LLM-written alert text** (§8.3) — worth prototyping both before committing, since it affects Stage 3's role and cost.
+5. **Grok search provider for Stage 2b** — still genuinely open; no specific xAI/Grok search API/endpoint has been named or confirmed.
 
 ---
 
