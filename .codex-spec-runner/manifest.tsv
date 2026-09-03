@@ -25,3 +25,6 @@
 2026-08-27T20:02:19-0700	docs/e3d-corp-e3d-trade-stack-spec.md	6	`e3d-trade` Outcome-Return Path	codex	gpt-5.4	exec	0	0
 2026-08-27T20:11:15-0700	docs/e3d-corp-e3d-trade-stack-spec.md	7	Acceptance Tests	codex	gpt-5.5	exec	0	0
 2026-08-27T20:14:07-0700	docs/e3d-corp-e3d-trade-stack-spec.md	8	Governed vs. Ungoverned Experiment Readiness Report	codex	gpt-5.4	exec	0	0
+2026-09-02T20:45:28-0700	docs/us-financial-stress-monitor-e3d-corp-spec.md	1	Webhook Intake & Proposal Creation (`E3D-FSM-201`)	codex	gpt-5.4	exec	0	0
+2026-09-02T20:49:27-0700	docs/us-financial-stress-monitor-e3d-corp-spec.md	2	Authority Policy & Reviewer Correction (`E3D-FSM-202`)	codex	gpt-5.5	exec	0	0
+2026-09-02T20:53:12-0700	docs/us-financial-stress-monitor-e3d-corp-spec.md	3	Two-Step Approval, Release Call, and Reject Callback (`E3D-FSM-203`)	codex	gpt-5.5	exec	0	1

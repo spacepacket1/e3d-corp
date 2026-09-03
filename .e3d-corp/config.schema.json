@@ -193,6 +193,42 @@
       },
       "additionalProperties": false
     },
+    "tradeOutcomeWebhook": {
+      "type": "object",
+      "required": ["tokenEnvVar"],
+      "properties": {
+        "tokenEnvVar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "stressEvaluationWebhook": {
+      "type": "object",
+      "required": ["tokenEnvVar"],
+      "properties": {
+        "tokenEnvVar": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "e3d": {
+      "type": "object",
+      "required": ["baseUrl"],
+      "properties": {
+        "baseUrl": { "type": "string", "minLength": 1 },
+        "releasePath": { "type": "string", "minLength": 1 },
+        "rejectPath": { "type": "string", "minLength": 1 },
+        "apiKeyEnvVar": { "type": "string", "minLength": 1 },
+        "sessionCookieEnvVar": { "type": "string", "minLength": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "maxAttempts": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
     "authorityNotify": {
       "type": "object",
       "properties": {
