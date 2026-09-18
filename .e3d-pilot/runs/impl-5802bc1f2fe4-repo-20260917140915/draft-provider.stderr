@@ -1,0 +1,2673 @@
+OpenAI Codex v0.149.0
+--------
+workdir: /Users/mini/e3d-corp
+model: gpt-5.6-sol
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a0afb3-43cd-7e51-8cba-e6afdbe74880
+--------
+user
+You are the draft stage of an autonomous repo-improvement pipeline.
+Turn the selected candidate below into a complete, csr-shaped phased
+Markdown spec that codex-spec-runner (csr) can run without any hand-editing.
+
+Follow these csr spec conventions exactly:
+
+# codex-spec-runner Spec Conventions (bundled copy)
+
+Bundled from `codex-spec-runner`'s README (`Spec Format` and `Spec Annotations`
+sections, runner version `0.3.0`) so the draft stage always has this contract
+available even when csr isn't checked out at a known path. If csr's own README
+changes, update this file to match.
+
+## Spec Format
+
+The spec should be Markdown with phase headings that include a phase number:
+
+```md
+## Phase 1 - Historical Replay
+## Phase 2 - Walk-Forward Validation
+## 6. Phase 3 - Execution Simulation
+```
+
+The runner extracts each phase section from its heading until the next phase heading.
+Phase metadata is parsed once per runner process, sorted numerically, and duplicate phase numbers fail before the provider is launched.
+
+## Spec Annotations
+
+Specs can override a phase model, add extra read files, and include verification hints with HTML comments inside the phase body:
+
+```md
+## Phase 2 - Report Writer
+
+<!-- runner:model=mini -->
+<!-- runner:read=docs/reporting-notes.md -->
+<!-- runner:verify=bash tests/reporting.sh -->
+```
+
+- `runner:model` overrides heuristic routing for that phase across providers
+- `runner:read` adds files to the "Read first" block
+- `runner:verify` tells the provider what to run and is rerun independently by the runner after a successful phase
+- legacy `codex:*` annotations are still accepted; `codex:model` only applies when `PROVIDER=codex`
+
+`runner:model` must name a provider csr's execute step actually dispatches: today that is only `codex` or `claude` (for example `runner:model=codex:gpt-5.6-sol` or `runner:model=claude:sonnet`). Never use a bare tier name alone without confirming it resolves under the target provider, and never invent a third provider name.
+
+Codex model availability depends on how this machine's Codex CLI is authenticated (ChatGPT account vs. API key) and changes over time as OpenAI deprecates or renames models — a model that worked previously can start failing with "model not supported" or a 404 with no warning. Do not copy a `codex:<model>` string from this file, from an old spec, or from memory without checking it is still current: read the most recent successful rows in `.codex-spec-runner/manifest.tsv` (same directory as this file's parent's `.codex-spec-runner/`) for the last model that actually completed a phase, or run `codex exec --model <model> -` with a trivial prompt and confirm it returns normally before drafting a phase annotation that depends on it. `gpt-5.5` and `gpt-5.4-mini` are both confirmed non-working under a ChatGPT-authenticated Codex CLI as of 2026-09; treat any specific model string in this file, including the example above, as illustrative only, never as a verified-current default.
+
+Hard requirements for your output:
+- Start with a "# <Title>" heading, then "## Overview", "## Goals",
+  "## Non-Goals", "## Existing Files", and "## Shared Constraints" sections.
+- Follow those with one or more numbered "## Phase N - Title" sections,
+  starting at Phase 1, each with "### Requirements" and
+  "### Acceptance Criteria" subsections.
+- Immediately under each phase heading, include exactly one
+  "<!-- runner:model=PROVIDER:MODEL -->" annotation where PROVIDER is
+  literally "codex" or "claude" (never "local", never anything else, and
+  never omitted).
+- Also under each phase heading, include one or more
+  "<!-- pilot:touches=<glob> -->" annotations (one per line, one glob per
+  annotation) naming every file/path glob that phase's Requirements will
+  touch. Every phase must have at least one.
+- Add "<!-- runner:read=... -->" / "<!-- runner:verify=... -->"
+  annotations where useful, per the conventions above.
+- When configured verification commands are listed in Context, use those
+  commands for runner:verify annotations; do not invent a broader package
+  script that may already be broken on the unchanged repository.
+- None of the pilot:touches globs for any phase may match any of these
+  protected paths -- never propose modifying them:
+- LICENSE
+- .github/workflows/**
+- .env*
+- .e3d-corp/**
+- ecosystem.config.cjs
+- ops/**
+- Keep the whole spec scoped to plausibly fit within 20 changed files and
+  700 changed lines total across all phases.
+
+Respond in exactly this shape:
+
+If, and only if, you can scope this candidate to satisfy every hard
+requirement above, wrap the complete spec Markdown in a fenced block
+starting with ```spec and ending with ```, then follow it with exactly:
+
+---DRAFT-STATUS---
+status: ok
+reason: <one line>
+
+If you cannot scope it that small, or it would require touching a
+protected path, do NOT emit a ```spec block at all: respond with only
+exactly:
+
+---DRAFT-STATUS---
+status: too-large
+reason: <one line explaining why it cannot be scoped>
+
+Context:
+
+## Selected Candidate (candidates.md)
+
+```text
+---
+selected: risk-guard-prototype
+reason: approved idea implementation
+focus: default
+---
+
+# Candidates
+
+## Proposed Candidates
+
+### Candidate risk-guard-prototype: Inbound request risk assessment: minimal HOLD/APPROVE prototype
+Duplicate: no
+Dedup rationale: No existing idea in this repo's ledger addresses inbound risk/request gating -- the four prior ideas (hash anchor workflow, demo/sandbox mode, pipeline velocity indicators, CLI --json/--dry-run flags) are all unrelated tooling and all rejected. This is a genuinely new capability, not an extension of any of them.
+Category: product-strategy
+Analogy: Same shape as e3d-corp's existing opportunity.prospect -> opportunity.communicator -> Proposal path, inverted: instead of scoring outbound opportunities to pursue, this scores inbound requests to gate. Reuses the authority-level/ACTION_POLICY gating and Decision/Outcome separation already built for FINANCIAL_ACTION, rather than inventing new safety machinery.
+Attraction (1-5): -
+Retention (1-5): -
+Effort: medium
+Revenue (1-5|n/a): -
+Description: Prototype the smallest possible slice of a 'Business Decision Guard' inside e3d-corp's existing runtime, reusing its architecture rather than building new machinery: one new Event type representing an inbound consequential request (e.g. a vendor invoice or payment request, added via CLI for this prototype rather than a live Gmail/Drive integration -- that's explicitly out of scope), one new role (risk.assess, parallel in shape to the existing opportunity.prospect role) that reads the request plus whatever evidence the existing evidence-gathering layer can surface (prior correspondence/vendor history if any exists in the event log) and returns a structured risk verdict (HOLD / APPROVE / CHECK) with reasoning, and one new action type (e.g. flag-payment-request) registered in lib/authority/policy.js's ACTION_POLICY at FINANCIAL_ACTION (level 3) authority, so nothing about the request is ever auto-approved -- it always produces a Proposal that requires an explicit human Decision before anything fires, exactly like every other level-3 action in this runtime. Deliverable is: CLI command to submit a request event, the risk.assess role, the Proposal it generates, and a test exercising the full Event to Proposal path (not the Decision/Action execution UI, and not any real external integration). This is a fast prototype to validate the concept, not the full product.
+
+```
+
+## Target Repo Tracked Files (truncated to 300)
+```text
+.codex-spec-runner/manifest.tsv
+.e3d-corp/config.schema.json
+.e3d-pilot/config.json
+.e3d-pilot/events.jsonl
+.e3d-pilot/ideas/idea-6bf468dd7534/idea.json
+.e3d-pilot/ideas/idea-7a05d1256673/idea.json
+.e3d-pilot/ideas/idea-80de83ff2ce7/idea.json
+.e3d-pilot/ideas/idea-e63f2b493715/idea.json
+.e3d-pilot/latest-run
+.e3d-pilot/runs/2026-08-16-e3d-corp/candidates.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-external-context.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-local-state.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-prompt.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-provider.stderr
+.e3d-pilot/runs/2026-08-16-e3d-corp/findings.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/focus
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-facts.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-prompt.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-provider.stderr
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-response.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-warnings.txt
+.gitignore
+LICENSE
+README.md
+bin/e3d-corp
+docs/build-e3d-corp.md
+docs/build-llm-budget.md
+docs/build-multi-provider-roles.md
+docs/build-portfolio-sheet-source.md
+docs/build-prospect-quality.md
+docs/e3d-corp-e3d-trade-experiment-readiness.md
+docs/e3d-corp-e3d-trade-preflight-findings.md
+docs/e3d-corp-e3d-trade-stack-spec.md
+docs/grok-provider.md
+docs/images/company-runtime.svg
+ecosystem.config.cjs
+examples/instance.example.json
+lib/actions/capitalMandate.js
+lib/actions/log.js
+lib/actions/pilotHandoff.js
+lib/actions/registry.js
+lib/actions/sendOutreach.js
+lib/anchor/anchor.js
+lib/anchor/emailTransport.js
+lib/authority/notify.js
+lib/authority/policy.js
+lib/calendar/googleCalendarApi.js
+lib/calendar/googleServiceAccount.js
+lib/cli.js
+lib/config.js
+lib/decisions/decide.js
+lib/evaluation/metrics.js
+lib/event-sources/e3dApplied.js
+lib/event-sources/googleCalendarBooking.js
+lib/events/chain.js
+lib/events/store.js
+lib/experience/assemble.js
+lib/experience/store.js
+lib/llm/budget.js
+lib/llm/grokCliClient.js
+lib/llm/localClient.js
+lib/llm/openaiCompatibleClient.js
+lib/llm/registry.js
+lib/opportunities/engine.js
+lib/opportunities/investingEngine.js
+lib/opportunities/investingSchema.js
+lib/opportunities/schema.js
+lib/opportunities/scoring.js
+lib/opportunities/store.js
+lib/outcomes/record.js
+lib/outcomes/schema.js
+lib/outcomes/store.js
+lib/outcomes/tradeReturn.js
+lib/outreach/sesTransport.js
+lib/pilot/checkShipped.js
+lib/pilot/handoffArtifact.js
+lib/proposals/capitalMandate.js
+lib/proposals/capitalMandateSchema.js
+lib/proposals/create.js
+lib/proposals/pilotHandoff.js
+lib/proposals/schema.js
+lib/proposals/store.js
+lib/research/adapter.js
+lib/research/knowledgeBaseMcp.js
+lib/research/mcpTransport.js
+lib/research/webSearch.js
+lib/roles/communicator.js
+lib/roles/investingOpportunity.js
+lib/roles/opportunityProspect.js
+lib/store/appendOnlyLog.js
+lib/trade/client.js
+lib/web/auth.js
+lib/web/csrf.js
+lib/web/render.js
+lib/web/server.js
+ops/reports/dailyDigest.js
+ops/reports/pollCalendarBookings.js
+ops/run/run-anchor-publish.sh
+ops/run/run-calendar-poll.sh
+ops/run/run-daily-digest.sh
+ops/run/run-futco-web.sh
+package-lock.json
+package.json
+test/capitalMandateAction.test.js
+test/capitalMandateProposal.test.js
+test/e3dTradeAcceptance.test.js
+test/experimentReadinessReport.test.js
+test/investingOpportunityRole.test.js
+test/phase1.test.js
+test/phase10.test.js
+test/phase2.test.js
+test/phase3.test.js
+test/phase4.test.js
+test/phase5.test.js
+test/phase6.test.js
+test/phase7.test.js
+test/phase8.test.js
+test/phase9.test.js
+test/tradeOutcomeWebhook.test.js
+```
+
+## Repo Docs
+### README.md
+```text
+# e3d-corp
+
+Public repo: [github.com/spacepacket1/e3d-corp](https://github.com/spacepacket1/e3d-corp)
+
+**e3d-corp decides what a company should do next: it gathers real evidence, turns it into scored opportunities, drafts proposals for the ones worth acting on, and refuses to touch the outside world until a human explicitly approves.**
+
+![e3d-corp's company runtime loop: event, opportunity and proposal run autonomously at authority levels 0-1, a gold human authority gate holds decision, and action, outcome and experience fire only after explicit approval, with experience feeding back into the next cycle](docs/images/company-runtime.svg)
+
+It is a company-agnostic, event-sourced runtime built on seven durable primitives — **Event → Opportunity → Proposal → Decision → Action → Outcome → Experience**. Models are replaceable reasoning components inside that runtime, not employees with job titles: a role receives explicit inputs, returns structured JSON matching a schema, and deterministic code does everything else. Every state transition is an append-only event carrying `causationId` and `correlationId`, so any conclusion the system reaches can be replayed from the originating signal to the measured outcome.
+
+## Why we built this
+
+Most "AI company" projects start from the org chart: give a model a name badge, let it move records around, and call the resulting activity progress. That produces motion, not decisions — and the moment one of those agents can actually send an email or move money, the interesting question stops being "can it imitate an employee?" and becomes "what happens when it's wrong?"
+
+The scarce resource at a small company is rarely bookkeeping capacity. It's *noticing* — spotting the consulting engagement, the partnership, the competitor move, the piece of internal work that would pay for itself, and doing it early enough to matter. That work is genuinely hard to automate honestly, because it depends entirely on real evidence: a recommendation grounded in a fabricated capability claim is worse than no recommendation at all.
+
+So e3d-corp is built the other way around. Research and scoring run continuously and autonomously, because reading the world is safe. Everything with a consequence — sending outreach, handing work to another system, touching money, closing a deal — stops at a gate that only a human can open, enforced inside the action functions themselves rather than as a courtesy check in the UI. The system's job is to bring you a short, well-evidenced list and the context to judge it. Deciding remains yours.
+
+## What it does differently
+
+- **Never lets a model mutate company state.** Roles return structured JSON validated against an explicit schema. Deterministic code applies policy, owns every state transition, and controls every side effect. A malformed or over-reaching model response fails validation; it does not become a decision.
+- **Never trusts a caller's claim about how much authority an action needs.** `authorityLevel` is derived from a versioned policy table by action type (`lib/authority/policy.js`), never accepted as input, so a role can't under-declare the authority its own proposal requires.
+- **Never fires a consequential action without a logged human Decision.** `assertProposalAuthorized` runs as the first line of every action executor and fails closed on an unknown type, a type/level mismatch, or a proposal that isn't `approved`. No config flag or environment variable bypasses it.
+- **Never implements a decision twice.** The CLI and the web UI call the same library functions for every transition. A Decision records `via: "cli" | "web"` for traceability — that is the *only* difference between the two surfaces.
+- **Never confuses approval with success.** A Decision (a human said yes) and an Outcome (the world responded) are separate records captured at separate times. Evaluation metrics keep them apart, so "approved" never quietly counts as "worked."
+- **Never invents evidence.** Every claim traces back to an `evidence.gathered` event holding the actual query and the actual result, from the company's own knowledge base (via MCP) or a web-search adapter. Degraded providers are recorded as degraded rather than silently skipped.
+- **Never lets history be edited quietly.** Every record in the event log carries a `prevHash` linking it to its predecessor and a `hash` over its own content, so altering any past record invalidates everything written after it. `event verify` walks the chain and names the first bad record.
+- **Never commits real business data.** Instance data — prospects, findings, decisions, revenue — lives in a gitignored directory outside the tracked tree. The repo ships a placeholder example config and nothing else.
+
+## The runtime loop
+
+```mermaid
+flowchart LR
+    S["signal / lead / scheduled pass"] --> E[["event store"]]
+    E --> P["opportunity.prospect"]
+    P -->|structured JSON| V{"schema valid?"}
+    V -->|no| DROP((discarded))
+    V -->|yes| O["opportunity: scored"]
+    O -->|human decides| NV((no-value))
+    O -->|human decides| PUR["pursuing"]
+    PUR --> C["opportunity.communicator"]
+    C --> PR[["proposal: pending"]]
+    PR -->|reject| REJ((rejected))
+    PR -->|approve, level 2| A["action fires"]
+    PR -->|approve, level 3-4| CONF["awaiting confirmation"]
+    CONF -->|explicit second step| A
+    A --> OUT[["outcome recorded"]]
+    OUT --> X[["experience"]]
+    X --> E
+```
+
+1. **Event** — every signal lands in an append-only `events.jsonl`: a scheduled research pass, an inbound lead, a calendar booking, or a hand-added event. This file is the single source of truth; Opportunities and Proposals are folded from it, never stored separately.
+2. **Research** — the evidence layer queries the company knowledge base over MCP and a pluggable web-search provider, appending an `evidence.gathered` event per call with the real query and result attached.
+3. **Opportunity** — the `opportunity.prospect` role reads the trigger and its evidence and returns candidate opportunities as structured JSON. Anything failing `validateOpportunityCandidate` is rejected outright rather than guess-parsed.
+4. **Scoring** — deterministic, not a second model call. Role confidence, evidence count, and trigger recency combine under configurable weights and a per-type multiplier into one sortable `score.value`.
+5. **Decision (what to pursue)** — a human moves an opportunity to `reviewed`, `pursuing`, or `no-value`. The underlying write is only authority level 1, but this is always an explicit human call: it's a product choice about where judgment belongs, not a safety requirement.
+6. **Proposal** — for `pursuing` opportunities, `opportunity.communicator` drafts a concrete action as a Proposal with a payload and a `proposedBy: { role, provider, model }` attribution. Drafting is autonomous; the proposal sits `pending`.
+7. **Decision (approve/reject) and Action** — approving a level-2 proposal fires its action in the same call, because the action is reversible and adding friction to reversible things is just friction. Level 3 and 4 approve *only*; execution needs a separate, explicit confirmation step.
+8. **Outcome → Experience** — real-world results are recorded as their own events. Once a chain reaches a Decision or an Outcome it is assembled into an Experience record, which is what the evaluation layer measures. Role and model attribution come only from what the log actually recorded — never reconstructed by guesswork.
+
+## Authority levels
+
+Levels are defined once, in full, so adding a higher-consequence action later can't force a breaking schema change. Only the levels that are actually needed are exercised.
+
+| Level | Meaning | Requires a human Decision? | Examples |
+|:-----:|---------|---------------------------|----------|
+| **0** | Observe — read-only research and ingestion | No, fully autonomous | web search, knowledge-base queries, ingesting a lead |
+| **1** | Internal / reversible write | No, fully autonomous | create or score an Opportunity, draft a Proposal, add a note |
+| **2** | External / reversible action | **Yes** — approval and execution are one call | `send-outreach`, `pilot-handoff` |
+| **3** | Financial / contractual action | **Yes** — approval, then a separate confirmation | `issue-invoice` |
+| **4** | Irreversible / high-value action | **Yes** — approval, then a separate confirmation | `mark-deal-closed` |
+
+Levels 0–1 never produce a Proposal at all. Levels 2–4 always do, and the mapping from action type to required level lives in one versioned table. An action type with no policy entry is refused rather than treated as autonomous — the failure mode is "nothing happens," never "it happened unsupervised."
+
+Today `send-outreach` and `pilot-handoff` have registered executors. `issue-invoice` and `mark-deal-closed` have policy entries but no executor yet: the guard exists ahead of the capability, deliberately.
+
+## An Opportunity is not a sales lead
+
+That's the most common thing to get wrong about this system. An Opportunity is any evidence-backed action the company should consider, including:
+
+`consulting-engagement` · `product-opportunity` · `feature-signal` · `partnership` · `distribution` · `technology-to-investigate` · `market-trend` · `competitor-development` · `event-to-attend` · `integration-opportunity` · `operational-improvement` · `cost-saving` · `other`
+
+The list is illustrative, not an enum — `type` is an open string, and instance config can weight any type up or down. A repeated customer request that implies a missing feature, a competitor's launch, a conference worth attending, and a cost-saving change to internal tooling are all first-class opportunities that flow through exactly the same pipeline as a prospective client.
+
+Statuses: `candidate` → `scored` → `reviewed` → `pursuing` → `won` / `lost`, with `no-value` available at any point.
+
+## Requirements and installation
+
+Node.js 18+ is the only runtime requirement. The single production dependency is the AWS SES client, used by the outreach transport.
+
+```bash
+git clone https://github.com/spacepacket1/e3d-corp.git
+cd e3d-corp
+npm install
+node bin/e3d-corp --help
+```
+
+You also need an OpenAI-compatible LLM endpoint. Any will do; the reference deployment points at a local Qwen2.5 served over MLX, so no company data leaves the machine.
+
+## Configure an instance
+
+One JSON file is the entire contract between e3d-corp and a company. Start from [`examples/instance.example.json`](examples/instance.example.json).
+
+| Field | Required | Purpose |
+|-------|:--------:|---------|
+| `name` | ✓ | Instance name; selects the config under `.e3d-corp/instance/<name>/` |
+| `dataDir` | ✓ | Private, gitignored directory holding this instance's real data |
+| `llm` | ✓ | `{ baseUrlEnvVar, modelEnvVar }` — *names* of env vars, never values |
+| `research` | ✓ | `{ knowledgeBaseMcpUrl, webSearchProvider, webSearchApiKeyEnvVar }` |
+| `eventSources` | ✓ | Declared inbound signal sources |
+| `roles` | ✓ | Role name → `{ provider, model }`; models are assigned, not hard-coded |
+| `researchTopics` | | Topics the scheduled discovery pass sweeps |
+| `scoring` | | `weights` and per-type `typeWeights` |
+| `outreach` | | `{ provider, region, fromEmail, fallbackToEmail }` for SES |
+| `web` | | `{ authUserEnvVar, authPassEnvVar, port }` |
+| `leadWebhook` | | `{ tokenEnvVar }` — bearer token for the inbound lead endpoint |
+| `anchor` | | `{ provider, toEmailEnvVar }` — where to publish the chain head |
+| `calendar` | | `{ provider, calendarId, organizerEmail, serviceAccountKeyFileEnvVar }` |
+| `authorityNotify` | | `{ email, command }` — best-effort ping when level-2+ approvals are pending |
+
+Validate it:
+
+```bash
+node bin/e3d-corp config validate examples/instance.example.json
+```
+
+### Secrets are never in the config
+
+Config holds the **name** of an environment variable, never its value. `llm.baseUrlEnvVar`, `web.authPassEnvVar`, `leadWebhook.tokenEnvVar`, and `calendar.serviceAccountKeyFileEnvVar` are all indirections. Actual credentials live in an env file inside the gitignored instance directory and are sourced at launch. This is what makes it safe for the config contract to be a tracked, reviewable artifact.
+
+## Operator workflow
+
+Discover — the scheduled pass that sweeps `researchTopics`, gathers evidence, and produces scored opportunities:
+
+```bash
+node bin/e3d-corp run --instance <name>
+```
+
+Review what it found, then decide. Nothing advances past `scored` on its own:
+
+```bash
+node bin/e3d-corp opportunities list --instance <name> --min-score 0.6
+node bin/e3d-corp opportunities show <id>
+node bin/e3d-corp opportunities decide <id> --status pursuing --reason "Worth a first email"
+```
+
+Draft actions for everything now marked `pursuing` (skips opportunities that already have one):
+
+```bash
+node bin/e3d-corp pursue --instance <name>
+```
+
+Review and decide on the resulting proposals. Approving a level-2 proposal sends the outreach in that same call:
+
+```bash
+node bin/e3d-corp proposals list --status pending
+node bin/e3d-corp proposals show <id>
+node bin/e3d-corp proposals approve <id> --reason "Good fit, send it"
+node bin/e3d-corp proposals reject  <id> --reason "Wrong segment"
+```
+
+A level-3 or level-4 proposal is only *approved* by that call — its action does not fire. The separate confirmation is its own command, which takes no `--reason`, because the deliberation already happened at approval and this step is just "yes, actually do it now":
+
+```bash
+node bin/e3d-corp proposals confirm <id>
+```
+
+Record what actually happened, then read the assembled chain:
+
+```bash
+node bin/e3d-corp outcomes record --correlation <id> --type meeting.booked --payload '{"note":"30m intro call"}'
+node bin/e3d-corp experience show <correlationId>
+node bin/e3d-corp event log --correlation <correlationId>
+node bin/e3d-corp evaluate report --since 2026-01-01
+node bin/e3d-corp event verify
+```
+
+Outcome types: `prospect.replied`, `meeting.booked`, `proposal.accepted`, `outcome.proposal.rejected`, `deal.won`, `deal.lost`, `invoice.paid`, `capability.shipped`, `customer.adopted`, `opportunity.no-value`.
+
+> Both surfaces reach the same second step: `proposals confirm` on the CLI and `POST /proposals/:id/confirm` in the web UI are thin calls into one `confirmAndExecute`. Every refusal — not approved, wrong authority level, no registered executor — is enforced there, not re-checked per surface.
+
+## Web UI
+
+The web UI is the primary human interface, built early rather than bolted on, because reviewing and approving is the real ongoing work this system creates.
+
+```bash
+node bin/e3d-corp web --instance <name> --port 3010
+```
+
+It is a hand-rolled Node HTTP server — no framework, no build step, no SPA toolchain. Basic auth is mandatory and the server refuses to start without credentials; there is no unauthenticated mode, because there is no demo data that would be safe to serve unauthenticated. Mutating routes are POST-only with same-site-cookie CSRF protection.
+
+| Route | Purpose |
+|-------|---------|
+| `/opportunities` | Ranked list, filterable by status and score |
+| `/opportunities/:id` | Detail, evidence chain, and the decide form |
+| `/proposals` | Pending and decided proposals |
+| `/proposals/:id` | Detail, with approve / reject / confirm |
+| `/actions` | Every action that actually fired |
+| `/outcomes` | Recorded real-world outcomes |
+| `/metrics` | The evaluation report |
+
+## Event sources
+
+Three inbound paths exist today, all converging on the same engine:
+
+- **Scheduled discovery** — `e3d-corp run` sweeps `researchTopics` on whatever cadence you schedule. e3d-corp does not ship a scheduler; use cron or PM2.
+- **Lead webhook** — `POST /webhooks/e3d-applied-lead` accepts a lead-capture submission authenticated by a bearer token compared in constant time. It sits *before* the basic-auth gate, since it is machine-to-machine. It records the lead, responds immediately, then runs the opportunity engine out of band so the caller isn't held open for an LLM round trip.
+- **Google Calendar bookings** — for contact forms whose call-to-action is an appointment-schedule booking rather than a form post. A poller authenticates as a service account using a hand-rolled RFC 7523 JWT bearer flow (no `googleapis` dependency), lists upcoming events, and records unseen ones as leads. Deduplication queries the event store for already-recorded Google event IDs rather than keeping a separate state file — `events.jsonl` stays the only source of truth.
+
+Adding a source means writing something that appends a well-formed event and calls `runOpportunityEngine`. The engine itself has no idea where its trigger came from.
+
+## Tamper evidence
+
+`events.jsonl` was append-only by convention — nothing structurally stopped a past record from being edited in place, which is precisely the property an audit trail is supposed to have. Every record now carries:
+
+```
+prevHash  — the hash of the record before it (null for the first, a seal for a pre-chaining prefix)
+hash      — sha256 over this record's canonical form, prevHash included
+```
+
+Because each hash covers the previous link, every record commits to the entire history behind it. Editing one record, or deleting one from the middle, invalidates every record after it:
+
+```bash
+node bin/e3d-corp event verify
+# Event chain intact: 412 of 412 records verified
+# Event chain BROKEN at record 137: record 137 (id 8a3c…) hashes to …, but carries … — this record's own content was altered
+```
+
+Adoption needed no rewriting of existing history: the first chained record's `prevHash` is a **seal** over the unchained prefix, so records written before this existed are still covered from that point forward. On a real instance's event log at the point chaining was adopted, altering any record from before that point still breaks verification at the same record it always would have.
+
+Hash chaining also makes every append a read-modify-write, so appends now take an exclusive lock. Without it, the 07:00 discovery pass and the :00 calendar poll — which genuinely overlap — could both claim the same `prevHash` and fork the chain.
+
+The primitives live in [`lib/store/appendOnlyLog.js`](lib/store/appendOnlyLog.js) rather than inside the event store, so Phase 11's `ledger.jsonl` inherits the same chain instead of inventing a second one.
+
+### External anchors
+
+The chain catches partial edits. It cannot catch the two failures where someone with write access rewrites the file wholesale: recomputing every hash after an edit yields a chain that verifies cleanly, and truncating the tail leaves a valid prefix. Both are only detectable against a record of what the log looked like earlier, held somewhere the process cannot reach back into.
+
+An **anchor** is that record — the chain head plus the record count at a moment in time, published outward:
+
+```bash
+node bin/e3d-corp anchor publish
+# Anchored 412 records at 4815668f39d63b99… → ops@yourcompany.example
+```
+
+Two numbers and a hash. No titles, names, amounts, or evidence — nothing that could identify a client or a deal ever rides along, which is what makes anchoring compatible with the rule that real business data never leaves the instance directory.
+
+The count is what makes truncation detectable and the head is what makes rewriting detectable. `event verify` checks both, and the anchor event's own `prevHash` *is* the anchored head by construction, so the anchor and the chain corroborate each other or neither is worth trusting.
+
+**An anchor stored in the log cannot catch truncation, and structurally never will.** An anchor at index *i* covers the *i* records before it, so any log still containing it is necessarily longer than the count it asserts — cutting the tail cuts the anchors along with it. Only the copy that left the machine survives that. So the emailed anchor is the one to verify against:
+
+```bash
+node bin/e3d-corp event verify --head 4815668f39d63b99… --count 412
+# Emailed anchor verified: the first 412 of 511 records are unchanged since it was published
+```
+
+Every anchor email carries that exact command with its own values filled in, and says to run it from the message rather than from the anchors in the log. There's a test asserting the in-log check genuinely cannot see a truncation, so the limit stays visible rather than being quietly assumed away.
+
+The transport is injected rather than hard-coded, matching how the research and outreach layers take their providers — so S3 Object Lock, a signed commit, a timestamping service, or a public chain is a new `send()` and nothing else. The reference deployment publishes daily by email, after the digest.
+
+**What none of this does:** it does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
+
+## Scoring
+
+Scoring is deliberately deterministic — asking a model to score its own output is how you get confident nonsense:
+
+```
+score.value = ( w_confidence · confidence
+              + w_evidence   · min(evidenceCount / 5, 1)
+              + w_recency    · recencyFactor(triggerOccurredAt) )
+              × typeMultiplier
+```
+
+`recencyFactor` decays linearly from 1.0 to 0.0 over 30 days, so a fresh signal outranks a stale one all else equal. `typeMultiplier` comes from `scoring.typeWeights[type]` and defaults to 1, which lets an instance emphasize whole categories — say, weighting consulting engagements above market trends — without touching the scoring code.
+
+## Handoff to e3d-pilot
+
+An opportunity whose answer is "we should build this" doesn't stay a document. `opportunities propose-handoff` produces a level-2 proposal that, on approval, writes a handoff artifact matching [e3d-pilot](https://github.com/spacepacket1/e3d-pilot)'s actual config contract — verified against its real input shape, not an assumed one. e3d-pilot takes it from idea to a draft PR under its own two approval gates.
+
+The loop closes with `opportunities check-shipped`, which re-queries the knowledge base for evidence that the capability now exists and records a `capability.shipped` outcome when it does. Neither repo imports the other; the contract is a file.
+
+## Evaluation
+
+`evaluate report` computes, over real events only:
+
+- opportunities discovered, broken down by type
+- opportunity acceptance rate (`pursuing` vs `no-value`) and proposal rejection rate
+- the outreach funnel — sent → replied → meetings booked → deals won
+- revenue attributable to chains that started here
+- cost per useful opportunity, where "useful" means the chain reached a genuinely positive outcome
+- latency and cost by role and model
+
+Counts come from the event store; per-chain economics come from assembled Experience records, since only a completed chain has a meaningful cost. Anything with no data reports `n/a` rather than a fabricated zero.
+
+## Deployment
+
+Node plus a scheduler is the whole story. The reference deployment runs the web UI under PM2 and drives everything else from cron: a nightly discovery pass, a morning HTML digest over SES, a daily anchor publish, and a booking poll every 15 minutes. Wrapper scripts under `ops/run/` source the instance env file before exec'ing the relevant entry point, keeping secrets out of crontab.
+
+There is no message queue, no external database, and no distributed event bus. At a small company's scale the thing that matters is a semantic contract and a replayable audit trail, not infrastructure.
+
+## What never gets committed
+
+`.e3d-corp/instance/` is gitignored in its entirety. No real client names, deal amounts, revenue figures, research findings about real prospects, credentials, or service-account keys enter this repository's history — ever. The tracked tree carries code, a placeholder example config, and this document.
+
+## Testing
+
+```bash
+npm test          # node --test
+npm run check     # syntax check + full suite
+```
+
+Ten suites — one per implemented phase, 94 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+
+## Status
+
+Phases 1–10 are implemented: runtime foundation, event store, research layer, opportunity engine, authority and decision framework, web UI, pursuit and outreach, the e3d-pilot handoff, outcome and experience capture, and evaluation.
+
+Phase 11 — CRM, ledger, and a bookkeeper role — is specified but deliberately unbuilt. It waits until the pursuit phases produce enough real deal volume to justify it. Model fine-tuning, multi-model negotiation for high-authority decisions, and any mechanism for adding roles are all gated on evidence from the evaluation layer that they would improve real outcomes. None of them ship early merely because they're possible.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+```
+
+## Configured Verification Commands
+
+- `npm install && npm run check`
+
+codex
+I’ll verify the most recently successful csr model, then inspect the relevant CLI, event, role, proposal, and policy patterns so the phases are executable and narrowly scoped.
+exec
+/bin/zsh -lc "tail -n 30 .codex-spec-runner/manifest.tsv && rg -n \"ACTION_POLICY|opportunity\\.prospect|proposedBy|createProposal|event.*append|commands|switch \\(|case '\" lib/authority/policy.js lib/cli.js lib/roles/opportunityProspect.js lib/proposals/create.js lib/events/store.js package.json" in /Users/mini/e3d-corp
+ succeeded in 0ms:
+2026-08-13T08:07:29-0700	docs/build-e3d-corp.md	1	Repo Scaffold, Instance Config, and Runtime Foundation	codex	gpt-5.4-mini	exec	0	0
+2026-08-13T10:34:23-0700	docs/build-e3d-corp.md	2	Company Event Store	claude	sonnet	exec	0	0
+2026-08-13T10:54:58-0700	docs/build-e3d-corp.md	3	Research/Evidence Layer	codex	gpt-5.4-mini	exec	0	0
+2026-08-13T11:22:44-0700	docs/build-e3d-corp.md	4	Opportunity Model and Opportunity Engine	claude	sonnet	exec	0	0
+2026-08-14T06:55:32-0700	docs/build-e3d-corp.md	5	Proposal, Authority Policy, and Decision Framework	claude	sonnet	exec	0	0
+2026-08-14T08:02:09-0700	docs/build-e3d-corp.md	6	Web UI: Opportunity and Proposal Review	claude	sonnet	exec	0	0
+2026-08-14T12:08:27-0700	docs/build-e3d-corp.md	7	Pursuit: Outreach Role and Approved External Actions	claude	sonnet	exec	0	0
+2026-08-14T13:15:00-0700	docs/build-e3d-corp.md	8	e3d-pilot Handoff Contract	claude	sonnet	exec	0	0
+2026-08-14T14:10:00-0700	docs/build-e3d-corp.md	9	Outcome Capture and Experience Log	claude	sonnet	exec	0	0
+2026-08-14T15:00:00-0700	docs/build-e3d-corp.md	10	Evaluation and Metrics	claude	sonnet	exec	0	0
+2026-08-22T06:21:45-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	1	0
+2026-08-22T06:21:49-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	0	0
+2026-08-22T06:35:40-0700	docs/build-multi-provider-roles.md	2	Multi-Provider Fan-Out for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-22T06:41:08-0700	docs/build-multi-provider-roles.md	3	Multi-Provider Fan-Out for `opportunity.communicator`	codex	gpt-5.4	exec	0	0
+2026-08-23T08:02:24-0700	docs/build-llm-budget.md	1	Real Usage/Cost Capture on Every Provider Call	codex	gpt-5.4	exec	0	0
+2026-08-23T08:09:06-0700	docs/build-llm-budget.md	2	Event-Sourced Budget Ledger, Config, and Reporting	codex	gpt-5.4	exec	0	0
+2026-08-23T08:15:52-0700	docs/build-llm-budget.md	3	Boss-Signaled, Budget-Gated Elective Second Opinions for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:36:44-0700	docs/build-prospect-quality.md	1	Self-Exclusion Filtering, `counterparty`, and `pursuable`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:42:45-0700	docs/build-prospect-quality.md	2	Surface Pursuable and Counterparty in the CLI and Web UI	codex	gpt-5.4	exec	0	0
+2026-08-27T17:07:44-0700	docs/e3d-corp-e3d-trade-stack-spec.md	1	Preflight and Verification	codex	gpt-5.5	exec	0	0
+2026-08-27T17:12:32-0700	docs/e3d-corp-e3d-trade-stack-spec.md	2	Investing Opportunity Scorer (`e3d-corp`)	codex	gpt-5.4	exec	0	0
+2026-08-27T17:18:12-0700	docs/e3d-corp-e3d-trade-stack-spec.md	3	`capital_mandate` Proposal Type (`e3d-corp`)	codex	gpt-5.5	exec	0	0
+2026-08-27T17:23:05-0700	docs/e3d-corp-e3d-trade-stack-spec.md	4	Approved-Mandate Action and Service Client (`e3d-corp`)	codex	gpt-5.5	exec	0	0
+2026-08-27T19:54:02-0700	docs/e3d-corp-e3d-trade-stack-spec.md	5	`e3d-trade` Mandate Intake and Constraint Integration	codex	gpt-5.5	exec	0	0
+2026-08-27T20:02:19-0700	docs/e3d-corp-e3d-trade-stack-spec.md	6	`e3d-trade` Outcome-Return Path	codex	gpt-5.4	exec	0	0
+2026-08-27T20:11:15-0700	docs/e3d-corp-e3d-trade-stack-spec.md	7	Acceptance Tests	codex	gpt-5.5	exec	0	0
+2026-08-27T20:14:07-0700	docs/e3d-corp-e3d-trade-stack-spec.md	8	Governed vs. Ungoverned Experiment Readiness Report	codex	gpt-5.4	exec	0	0
+lib/proposals/create.js:11:export function createProposal(
+lib/proposals/create.js:13:  { type, payload, proposedBy, causationId = null, correlationId, instanceConfig } = {}
+lib/proposals/create.js:15:  const { valid, errors } = validateProposalInput({ type, payload, proposedBy, causationId, correlationId });
+lib/proposals/create.js:37:    proposedBy,
+lib/proposals/create.js:45:  const event = appendEvent(dataDir, {
+lib/proposals/create.js:47:    source: `role:${proposedBy.role}`,
+lib/cli.js:43:  ['run --instance <name>', 'Run the scheduled discovery pass (instance config researchTopics) through opportunity.prospect'],
+lib/cli.js:78:      '`experience show`, `evaluate report`, `budget status`. The remaining commands are documented stubs for later phases.'
+lib/cli.js:765:  process.stdout.write(`  proposedBy:   ${JSON.stringify(proposal.proposedBy)}\n`);
+lib/cli.js:773:        `    ${sibling.id}  [${sibling.status}]  provider=${sibling.proposedBy?.provider ?? '-'}  subject=${JSON.stringify(sibling.payload?.subject ?? '')}\n`
+lib/roles/opportunityProspect.js:6:const ROLE_NAME = 'opportunity.prospect';
+lib/roles/opportunityProspect.js:10:    `You are the opportunity.prospect role inside e3d-corp, a system that helps ${companyName} find real, ` +
+lib/roles/opportunityProspect.js:141:    throw new Error('opportunity.prospect returned empty output');
+lib/roles/opportunityProspect.js:148:    throw new Error(`opportunity.prospect returned invalid JSON: ${error.message}`);
+lib/roles/opportunityProspect.js:395:      proposedBy: { role: ROLE_NAME, provider, model }
+lib/authority/policy.js:21:export const ACTION_POLICY_VERSION = 2;
+lib/authority/policy.js:30:export const ACTION_POLICY = Object.freeze({
+lib/authority/policy.js:42:  const level = ACTION_POLICY[actionType];
+lib/authority/policy.js:45:      `No authority policy defined for action type "${actionType}" (policy v${ACTION_POLICY_VERSION}); refusing to treat it as autonomous`
+lib/authority/policy.js:71:      `Action refused: proposal ${proposal.id} has authorityLevel ${proposal.authorityLevel}, policy v${ACTION_POLICY_VERSION} requires ${requiredLevel} for "${actionType}"`
+
+exec
+/bin/zsh -lc "sed -n '1,130p' lib/authority/policy.js; sed -n '1,130p' lib/proposals/create.js; sed -n '1,180p' lib/proposals/schema.js; sed -n '1,150p' lib/events/store.js; sed -n '1,125p' lib/cli.js; rg -n \"export async function main|async function|function handle|argv\\[|commands =|command ===|case \\\"|case '\" lib/cli.js | head -n 100; sed -n '1,180p' lib/llm/registry.js; sed -n '1,100p' lib/roles/investingOpportunity.js; sed -n '1,160p' test/investingOpportunityRole.test.js" in /Users/mini/e3d-corp
+ succeeded in 0ms:
+// The full authority level enum (Shared Constraints in docs/build-e3d-corp.md).
+// Levels 0-1 are autonomous and never generate a Proposal/Decision (Phase 4
+// already implements this for Opportunity creation/scoring). Levels 2-4 always
+// require an explicit, logged human Decision - no exceptions, no override.
+export const AUTHORITY_LEVELS = Object.freeze({
+  OBSERVE: 0,
+  INTERNAL_WRITE: 1,
+  EXTERNAL_ACTION: 2,
+  FINANCIAL_ACTION: 3,
+  IRREVERSIBLE_ACTION: 4
+});
+
+export const AUTHORITY_LEVEL_DESCRIPTIONS = Object.freeze({
+  0: 'observe - read-only research/ingestion; fully autonomous',
+  1: 'internal/reversible write - create/update an Opportunity, draft a Proposal, add an internal note; fully autonomous',
+  2: 'external/reversible action - send outreach, hand off to e3d-pilot; approval and execution are the same call',
+  3: 'financial/contractual action - issue an invoice, record a payment, sign anything; approval only, execution requires confirmAndExecute',
+  4: 'irreversible/high-value action - mark a deal closed-won/closed-lost, public announcement; approval only, execution requires confirmAndExecute'
+});
+
+export const ACTION_POLICY_VERSION = 2;
+
+// Versioned policy table: action `type` -> minimum required authority level.
+// Every action-execution function (Phase 7 onward) must call
+// assertProposalAuthorized against this table before doing anything with a
+// side effect - this is the single source of truth for "how much authority
+// does this action need," read at the call site itself, not just by the CLI
+// or web UI. Only levels 2-4 appear here: levels 0-1 are autonomous writes
+// that never go through a Proposal at all.
+export const ACTION_POLICY = Object.freeze({
+  'send-outreach': AUTHORITY_LEVELS.EXTERNAL_ACTION,
+  'pilot-handoff': AUTHORITY_LEVELS.EXTERNAL_ACTION,
+  capital_mandate: AUTHORITY_LEVELS.FINANCIAL_ACTION,
+  'issue-invoice': AUTHORITY_LEVELS.FINANCIAL_ACTION,
+  'mark-deal-closed': AUTHORITY_LEVELS.IRREVERSIBLE_ACTION
+});
+
+export function getRequiredAuthorityLevel(actionType) {
+  if (typeof actionType !== 'string' || actionType.trim() === '') {
+    throw new Error('getRequiredAuthorityLevel requires a non-empty action type');
+  }
+  const level = ACTION_POLICY[actionType];
+  if (level === undefined) {
+    throw new Error(
+      `No authority policy defined for action type "${actionType}" (policy v${ACTION_POLICY_VERSION}); refusing to treat it as autonomous`
+    );
+  }
+  return level;
+}
+
+// The guard every action-execution function calls at its own call site, every
+// time, with no override. Fails closed: unknown type, type/level mismatch, or
+// a proposal that isn't `approved` all refuse to let the action proceed.
+export function assertProposalAuthorized(proposal, actionType) {
+  const requiredLevel = getRequiredAuthorityLevel(actionType);
+
+  if (requiredLevel < AUTHORITY_LEVELS.EXTERNAL_ACTION) {
+    throw new Error(
+      `Action type "${actionType}" is authority level ${requiredLevel}; it does not require a Proposal/Decision and should never be gated here`
+    );
+  }
+
+  if (!proposal || typeof proposal !== 'object') {
+    throw new Error(`Action refused: no proposal provided for action type "${actionType}"`);
+  }
+  if (proposal.type !== actionType) {
+    throw new Error(`Action refused: proposal ${proposal.id} is type "${proposal.type}", expected "${actionType}"`);
+  }
+  if (proposal.authorityLevel !== requiredLevel) {
+    throw new Error(
+      `Action refused: proposal ${proposal.id} has authorityLevel ${proposal.authorityLevel}, policy v${ACTION_POLICY_VERSION} requires ${requiredLevel} for "${actionType}"`
+    );
+  }
+  if (proposal.status !== 'approved') {
+    throw new Error(`Action refused: proposal ${proposal.id} is not approved (status: ${proposal.status})`);
+  }
+
+  return true;
+}
+import crypto from 'node:crypto';
+import { appendEvent } from '../events/store.js';
+import { normalizeProposalPayload, validateProposalInput } from './schema.js';
+import { getRequiredAuthorityLevel, AUTHORITY_LEVELS } from '../authority/policy.js';
+import { authorityNotify } from '../authority/notify.js';
+
+// Creating a Proposal is itself an authority-level-1 (internal, reversible)
+// write - autonomous, no approval needed, exactly like creating an
+// Opportunity in Phase 4. What the Proposal proposes to *do* is what carries
+// authorityLevel 2-4 and requires a Decision before it fires.
+export function createProposal(
+  dataDir,
+  { type, payload, proposedBy, causationId = null, correlationId, instanceConfig } = {}
+) {
+  const { valid, errors } = validateProposalInput({ type, payload, proposedBy, causationId, correlationId });
+  if (!valid) {
+    throw new Error(`Invalid proposal:\n- ${errors.join('\n- ')}`);
+  }
+
+  // authorityLevel always comes from the versioned policy table, never from
+  // the caller - this is what makes the table a single source of truth
+  // instead of something a role could accidentally under-declare.
+  const authorityLevel = getRequiredAuthorityLevel(type);
+  if (authorityLevel < AUTHORITY_LEVELS.EXTERNAL_ACTION) {
+    throw new Error(
+      `Action type "${type}" is authority level ${authorityLevel}; levels 0-1 are autonomous writes and never generate a Proposal`
+    );
+  }
+
+  const id = crypto.randomUUID();
+  const createdAt = new Date().toISOString();
+  const normalizedPayload = normalizeProposalPayload(type, payload, { proposalId: id, correlationId, createdAt });
+  const record = {
+    id,
+    type,
+    payload: normalizedPayload,
+    proposedBy,
+    authorityLevel,
+    causationId,
+    correlationId,
+    status: 'pending',
+    createdAt
+  };
+
+  const event = appendEvent(dataDir, {
+    type: 'proposal.created',
+    source: `role:${proposedBy.role}`,
+    subject: { type: 'proposal', id },
+    payload: record,
+    causationId,
+    correlationId
+  });
+
+  // Best-effort: every newly pending level-2+ proposal (all of them, by
+  // construction) triggers optional notification. Failure never blocks
+  // approvability - authorityNotify never throws.
+  if (instanceConfig) {
+    authorityNotify(instanceConfig, record);
+  }
+
+  return { proposal: record, event };
+}
+import { CAPITAL_MANDATE_PROPOSAL_TYPE, normalizeCapitalMandatePayload } from './capitalMandateSchema.js';
+
+export const PROPOSAL_STATUSES = ['pending', 'approved', 'rejected'];
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+// Validates the input to createProposal. `authorityLevel` is deliberately not
+// part of this input - it is derived from the versioned policy table
+// (lib/authority/policy.js) by type, never trusted from a caller, so a role
+// can never under-declare the authority an action actually needs.
+export function validateProposalInput({ type, payload, proposedBy, causationId, correlationId }) {
+  const errors = [];
+
+  if (!isNonEmptyString(type)) {
+    errors.push('type: must be a non-empty string');
+  }
+  if (payload === undefined) {
+    errors.push('payload: is required');
+  }
+  if (!isPlainObject(proposedBy)) {
+    errors.push('proposedBy: must be an object with { role, provider, model }');
+  } else {
+    if (!isNonEmptyString(proposedBy.role)) errors.push('proposedBy.role: must be a non-empty string');
+    if (!isNonEmptyString(proposedBy.provider)) errors.push('proposedBy.provider: must be a non-empty string');
+    if (!isNonEmptyString(proposedBy.model)) errors.push('proposedBy.model: must be a non-empty string');
+  }
+  if (causationId !== null && causationId !== undefined && !isNonEmptyString(causationId)) {
+    errors.push('causationId: must be a non-empty string or null');
+  }
+  if (!isNonEmptyString(correlationId)) {
+    errors.push('correlationId: must be a non-empty string');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function normalizeProposalPayload(type, payload, context = {}) {
+  if (type === CAPITAL_MANDATE_PROPOSAL_TYPE) {
+    return normalizeCapitalMandatePayload(payload, context);
+  }
+  return payload;
+}
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {
+  computeRecordHash,
+  resolveNextPrevHash,
+  verifyHashChain,
+  withAsyncFileLock,
+  withFileLock
+} from '../store/appendOnlyLog.js';
+
+export function eventsFilePath(dataDir) {
+  return path.join(dataDir, 'events.jsonl');
+}
+
+function eventsLockPath(dataDir) {
+  return path.join(dataDir, '.events.lock');
+}
+
+function ensureDataDir(dataDir) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+function appendEventUnlocked(dataDir, event) {
+  const causationId = event.causationId ?? null;
+  const existing = readAllEvents(dataDir);
+
+  if (causationId !== null) {
+    const found = existing.some((prior) => prior.id === causationId);
+    if (!found) {
+      throw new Error(
+        `Invalid event: causationId "${causationId}" does not reference an existing event`
+      );
+    }
+  }
+
+  const record = {
+    id: event.id ?? crypto.randomUUID(),
+    type: event.type,
+    occurredAt: event.occurredAt ?? new Date().toISOString(),
+    source: event.source,
+    subject: { type: event.subject.type, id: event.subject.id },
+    payload: event.payload,
+    causationId,
+    correlationId: event.correlationId,
+    prevHash: resolveNextPrevHash(existing)
+  };
+  record.hash = computeRecordHash(record);
+
+  fs.appendFileSync(eventsFilePath(dataDir), `${JSON.stringify(record)}\n`, {
+    encoding: 'utf8',
+    flag: 'a'
+  });
+
+  return record;
+}
+
+export function withEventsLock(dataDir, fn) {
+  ensureDataDir(dataDir);
+  return withFileLock(eventsLockPath(dataDir), fn);
+}
+
+export async function withEventsLockAsync(dataDir, fn) {
+  ensureDataDir(dataDir);
+  return await withAsyncFileLock(eventsLockPath(dataDir), fn);
+}
+
+export function appendEventWithinLock(dataDir, event) {
+  if (event === null || typeof event !== 'object' || Array.isArray(event)) {
+    throw new Error('Event must be an object');
+  }
+
+  const errors = [];
+  validateEventInput(event, errors);
+  if (errors.length > 0) {
+    throw new Error(`Invalid event:\n- ${errors.join('\n- ')}`);
+  }
+
+  ensureDataDir(dataDir);
+  return appendEventUnlocked(dataDir, event);
+}
+
+// Every record in file order, hash-chain fields included. queryEvents sorts
+// by occurredAt, which is right for reading history but wrong for anything
+// verifying the chain — append order is what the hashes commit to.
+export function readAllEventRecords(dataDir) {
+  return readAllEvents(dataDir);
+}
+
+function readAllEvents(dataDir) {
+  const filePath = eventsFilePath(dataDir);
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+
+  const raw = fs.readFileSync(filePath, 'utf8');
+  return raw
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line));
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+function validateEventInput(event, errors) {
+  if (!isNonEmptyString(event.type)) {
+    errors.push('type: must be a non-empty string');
+  }
+  if (!isNonEmptyString(event.source)) {
+    errors.push('source: must be a non-empty string');
+  }
+  if (event.subject === undefined || event.subject === null || typeof event.subject !== 'object') {
+    errors.push('subject: must be an object with { type, id }');
+  } else {
+    if (!isNonEmptyString(event.subject.type)) {
+      errors.push('subject.type: must be a non-empty string');
+    }
+    if (!isNonEmptyString(event.subject.id)) {
+      errors.push('subject.id: must be a non-empty string');
+    }
+  }
+  if (event.payload === undefined) {
+    errors.push('payload: is required');
+  }
+  if (!isNonEmptyString(event.correlationId)) {
+    errors.push('correlationId: must be a non-empty string');
+  }
+  if (
+    event.causationId !== null &&
+    event.causationId !== undefined &&
+    !isNonEmptyString(event.causationId)
+  ) {
+    errors.push('causationId: must be a non-empty string or null');
+  }
+}
+
+export function appendEvent(dataDir, event) {
+  // Reading the tail to resolve prevHash and validating causationId both have
+  // to see the same log the append lands on, so the whole read-then-append
+  // runs under one lock. O_APPEND keeps concurrent writes from interleaving
+  // but cannot make a read-modify-write atomic on its own.
+  return withEventsLock(dataDir, () => appendEventWithinLock(dataDir, event));
+}
+
+// Walks the whole log and reports the first tampered or missing record.
+// Events written before chaining existed are counted as `unchained` rather
+// than failures — they are sealed by the first chained record's prevHash, so
+// they still cannot be altered silently.
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { loadInstance, loadInstanceConfig, resolvePath } from './config.js';
+import { appendEvent, queryEvents, verifyEventChain } from './events/store.js';
+import { reconstructChain } from './events/chain.js';
+import { createResearchAdapter } from './research/adapter.js';
+import { runDiscoveryPass } from './opportunities/engine.js';
+import { listOpportunities, getOpportunity } from './opportunities/store.js';
+import { groupProposals, listProposals, getProposal, listSiblingProposals } from './proposals/store.js';
+import { decideOpportunity, decideProposal, confirmAndExecute } from './decisions/decide.js';
+import { startWebServer } from './web/server.js';
+import { runOpportunityCommunicator } from './roles/communicator.js';
+import { registerActionExecutor } from './actions/registry.js';
+import { sendOutreach } from './actions/sendOutreach.js';
+import { proposePilotHandoff } from './proposals/pilotHandoff.js';
+import { pilotHandoff } from './actions/pilotHandoff.js';
+import { submitCapitalMandate } from './actions/capitalMandate.js';
+import { checkCapabilityShipped } from './pilot/checkShipped.js';
+import { recordOutcome } from './outcomes/record.js';
+import { OUTCOME_TYPES } from './outcomes/schema.js';
+import { assembleExperience } from './experience/assemble.js';
+import { computeMetrics, formatMetricsReport } from './evaluation/metrics.js';
+import { publishAnchor, verifyAgainstAnchors, verifyExternalAnchor } from './anchor/anchor.js';
+import { createEmailAnchorTransport } from './anchor/emailTransport.js';
+import { computeBudgetStatus, listBudgetProviders } from './llm/budget.js';
+import { listProviderStatuses } from './llm/registry.js';
+
+// The one place a real action-execution function is wired up to the type it
+// fires for - every CLI invocation and the web server both import this
+// module, so registering here covers both surfaces from a single call site.
+registerActionExecutor('send-outreach', sendOutreach);
+registerActionExecutor('pilot-handoff', pilotHandoff);
+registerActionExecutor('capital_mandate', submitCapitalMandate);
+
+const COMMANDS = [
+  ['config validate <instance-config-path>', 'Validate an instance config file'],
+  ['providers status --instance <name>', 'Report configured provider readiness without making a completion call'],
+  ['budget status --instance <name>', 'Report current per-provider token budget status for configured limits'],
+  ['event add --instance <name> --type <type> --source <source> --payload <json>', 'Add a Company Event'],
+  ['event log --instance <name> [--correlation <id>] [--since <date>]', 'Render a human-readable, ordered event log'],
+  ['event verify --instance <name> [--head <hash> --count <n>]', 'Verify the hash chain, published anchors, and optionally an emailed anchor'],
+  ['anchor publish --instance <name>', 'Publish the current chain head to an external anchor (email)'],
+  ['run --instance <name>', 'Run the scheduled discovery pass (instance config researchTopics) through opportunity.prospect'],
+  ['pursue --instance <name>', 'Run opportunity.communicator over "pursuing" opportunities that have no send-outreach proposal yet'],
+  ['opportunities list --instance <name> [--status <status>] [--min-score <n>] [--pursuable-only]', 'List opportunities, pursuable first, then ranked by score (dev/debug CLI)'],
+  ['opportunities show <id> --instance <name>', 'Show an opportunity and its causal chain (dev/debug CLI)'],
+  ['opportunities decide <id> --instance <name> --status <status> --reason <reason>', 'Decide what to do with an opportunity (reviewed|pursuing|no-value)'],
+  ['opportunities propose-handoff <id> --instance <name> --repo <path> --reason <reason>', 'Propose an e3d-pilot handoff for a "pursuing" opportunity'],
+  ['opportunities check-shipped <id> --instance <name>', 'Re-query the knowledge base for evidence a related capability now exists'],
+  ['proposals list --instance <name> [--status <status>] [--type <type>]', 'List proposals (dev/debug CLI)'],
+  ['proposals show <id> --instance <name>', 'Show a proposal (dev/debug CLI)'],
+  ['proposals approve <id> --instance <name> --reason <reason>', 'Approve a proposal (level-2 fires its action immediately)'],
+  ['proposals reject <id> --instance <name> --reason <reason>', 'Reject a proposal'],
+  ['proposals confirm <id> --instance <name>', 'Confirm and fire an approved level-3/4 proposal (the required second step)'],
+  ['web --instance <name> [--port <n>]', 'Start the web UI (basic auth required; refuses to start without it)'],
+  ['outcomes record --instance <name> --correlation <id> --type <type> --payload <json> [--occurred-at <iso>]', 'Record a real-world Outcome for a chain'],
+  ['experience show <correlationId> --instance <name>', 'Render one fully assembled Experience record for a chain'],
+  ['evaluate report --instance <name> [--since <date>]', 'Render evaluation metrics computed over real events/experience data']
+];
+
+export function formatHelp() {
+  const lines = [
+    'Usage:',
+    '  e3d-corp <command> [options]',
+    '',
+    'Commands:'
+  ];
+
+  for (const [command, description] of COMMANDS) {
+    lines.push(`  ${command.padEnd(40)} ${description}`);
+  }
+
+  lines.push(
+    '',
+    'Implemented so far: `config validate`, `providers status`, `event add`, `event log`, `event verify`, `anchor publish`, `run`, `pursue`, `opportunities list`, ' +
+      '`opportunities show`, `opportunities decide`, `opportunities propose-handoff`, `opportunities check-shipped`, ' +
+      '`proposals list`, `proposals show`, `proposals approve`, `proposals reject`, `proposals confirm`, `web`, `outcomes record`, ' +
+      '`experience show`, `evaluate report`, `budget status`. The remaining commands are documented stubs for later phases.'
+  );
+  return lines.join('\n');
+}
+
+function printHelp(stream = process.stdout) {
+  stream.write(`${formatHelp()}\n`);
+}
+
+function printNotImplemented(commandPath) {
+  process.stderr.write(`Not yet implemented: ${commandPath}\n`);
+  process.exitCode = 1;
+}
+
+function normalizeHelpFlag(args) {
+  return args.length === 0 || args.includes('--help') || args.includes('-h');
+}
+
+function parseFlags(args) {
+  const flags = {};
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (!arg.startsWith('--')) continue;
+    const key = arg.slice(2);
+    const next = args[i + 1];
+    if (next !== undefined && !next.startsWith('--')) {
+      flags[key] = next;
+      i += 1;
+    } else {
+      flags[key] = true;
+    }
+  }
+  return flags;
+}
+
+function formatPursuableMarker(opportunity) {
+  return opportunity?.pursuable === true ? '[pursuable]' : '[intel-only]';
+}
+
+function formatCounterpartySummary(counterparty) {
+  if (!counterparty) {
+    return 'unknown (predates this field)';
+  }
+  if (counterparty.kind === 'none') {
+    return 'none';
+  }
+
+  const parts = [counterparty.name ?? 'unknown', `kind=${counterparty.kind}`];
+256:async function anchorPublishCommand(args) {
+314:async function runCommand(args) {
+357:async function pursueCommand(args) {
+588:async function opportunitiesCheckShippedCommand(args) {
+632:async function proposalsDecideCommand(args, decisionValue) {
+672:async function proposalsConfirmCommand(args) {
+993:export async function run(argv = process.argv.slice(2)) {
+1002:    if (group === 'config' && subcommand === 'validate') {
+1012:    if (group === 'providers' && subcommand === 'status') {
+1022:    if (group === 'budget' && subcommand === 'status') {
+1032:    if (group === 'event' && subcommand === 'add') {
+1036:    if (group === 'event' && subcommand === 'log') {
+1040:    if (group === 'event' && subcommand === 'verify') {
+1044:    if (group === 'anchor' && subcommand === 'publish') {
+1068:    if (group === 'opportunities' && subcommand === 'list') {
+1072:    if (group === 'opportunities' && subcommand === 'show') {
+1076:    if (group === 'opportunities' && subcommand === 'decide') {
+1080:    if (group === 'opportunities' && subcommand === 'propose-handoff') {
+1084:    if (group === 'opportunities' && subcommand === 'check-shipped') {
+1088:    if (group === 'proposals' && subcommand === 'list') {
+1092:    if (group === 'proposals' && subcommand === 'show') {
+1096:    if (group === 'proposals' && subcommand === 'approve') {
+1100:    if (group === 'proposals' && subcommand === 'reject') {
+1104:    if (group === 'proposals' && subcommand === 'confirm') {
+1112:    if (group === 'outcomes' && subcommand === 'record') {
+1116:    if (group === 'experience' && subcommand === 'show') {
+1120:    if (group === 'evaluate' && subcommand === 'report') {
+import { callGrokCli, DEFAULT_GROK_MODEL, findBinary, resolveGrokCliSettings } from './grokCliClient.js';
+import { callLocalLlm, resolveLocalProviderSettings } from './localClient.js';
+import { callOpenAiCompatibleLlm, resolveOpenAiCompatibleSettings } from './openaiCompatibleClient.js';
+
+function requireProvider(instanceConfig, providerName) {
+  const providerConfig = instanceConfig?.llm?.providers?.[providerName];
+  if (!providerConfig) {
+    throw new Error(`Provider "${providerName}" is not defined under llm.providers`);
+  }
+  return providerConfig;
+}
+
+function wrapResolutionError(providerName, error) {
+  return new Error(`Provider "${providerName}" is not ready: ${error.message}`);
+}
+
+function resolveProviderStatus(providerName, providerConfig) {
+  switch (providerConfig.kind) {
+    case 'local':
+      return {
+        provider: providerName,
+        kind: providerConfig.kind,
+        ready: Boolean(process.env[providerConfig.baseUrlEnvVar] && process.env[providerConfig.modelEnvVar]),
+        checks: [
+          {
+            type: 'env',
+            name: providerConfig.baseUrlEnvVar,
+            ready: Boolean(process.env[providerConfig.baseUrlEnvVar]),
+            message: process.env[providerConfig.baseUrlEnvVar]
+              ? `env var ${providerConfig.baseUrlEnvVar} is set`
+              : `missing env var ${providerConfig.baseUrlEnvVar}`
+          },
+          {
+            type: 'env',
+            name: providerConfig.modelEnvVar,
+            ready: Boolean(process.env[providerConfig.modelEnvVar]),
+            message: process.env[providerConfig.modelEnvVar]
+              ? `env var ${providerConfig.modelEnvVar} is set`
+              : `missing env var ${providerConfig.modelEnvVar}`
+          }
+        ]
+      };
+    case 'openai-compatible':
+      return {
+        provider: providerName,
+        kind: providerConfig.kind,
+        ready: Boolean(
+          process.env[providerConfig.baseUrlEnvVar] &&
+            process.env[providerConfig.modelEnvVar] &&
+            process.env[providerConfig.apiKeyEnvVar]
+        ),
+        checks: [
+          {
+            type: 'env',
+            name: providerConfig.baseUrlEnvVar,
+            ready: Boolean(process.env[providerConfig.baseUrlEnvVar]),
+            message: process.env[providerConfig.baseUrlEnvVar]
+              ? `env var ${providerConfig.baseUrlEnvVar} is set`
+              : `missing env var ${providerConfig.baseUrlEnvVar}`
+          },
+          {
+            type: 'env',
+            name: providerConfig.modelEnvVar,
+            ready: Boolean(process.env[providerConfig.modelEnvVar]),
+            message: process.env[providerConfig.modelEnvVar]
+              ? `env var ${providerConfig.modelEnvVar} is set`
+              : `missing env var ${providerConfig.modelEnvVar}`
+          },
+          {
+            type: 'env',
+            name: providerConfig.apiKeyEnvVar,
+            ready: Boolean(process.env[providerConfig.apiKeyEnvVar]),
+            message: process.env[providerConfig.apiKeyEnvVar]
+              ? `env var ${providerConfig.apiKeyEnvVar} is set`
+              : `missing env var ${providerConfig.apiKeyEnvVar}`
+          }
+        ]
+      };
+    case 'grok-cli': {
+      const binaryName = providerConfig.binEnvVar ? process.env[providerConfig.binEnvVar] : 'grok';
+      const binaryReady = Boolean(binaryName && findBinary(binaryName));
+      return {
+        provider: providerName,
+        kind: providerConfig.kind,
+        ready: binaryReady,
+        checks: providerConfig.binEnvVar
+          ? [
+              {
+                type: 'env',
+                name: providerConfig.binEnvVar,
+                ready: Boolean(process.env[providerConfig.binEnvVar]),
+                message: process.env[providerConfig.binEnvVar]
+                  ? `env var ${providerConfig.binEnvVar} is set`
+                  : `missing env var ${providerConfig.binEnvVar}`
+              },
+              {
+                type: 'binary',
+                name: binaryName ?? 'grok',
+                ready: binaryReady,
+                message: binaryReady ? `binary ${binaryName} found` : `missing binary ${binaryName ?? 'grok'}`
+              }
+            ]
+          : [
+              {
+                type: 'binary',
+                name: 'grok',
+                ready: binaryReady,
+                message: binaryReady ? 'binary grok found' : 'missing binary grok'
+              }
+            ]
+      };
+    }
+    default:
+      return {
+        provider: providerName,
+        kind: providerConfig.kind,
+        ready: false,
+        checks: [{ type: 'config', name: 'kind', ready: false, message: `unsupported kind ${providerConfig.kind}` }]
+      };
+  }
+}
+
+export function listProviderStatuses(instanceConfig) {
+  return Object.entries(instanceConfig?.llm?.providers ?? {}).map(([providerName, providerConfig]) =>
+    resolveProviderStatus(providerName, providerConfig)
+  );
+}
+
+export function resolveProvider(instanceConfig, providerName) {
+  const providerConfig = requireProvider(instanceConfig, providerName);
+
+  try {
+    switch (providerConfig.kind) {
+      case 'local': {
+        const { baseUrl, model, timeoutMs } = resolveLocalProviderSettings(providerConfig);
+        return {
+          model,
+          call: ({ systemPrompt, userPrompt }) =>
+            callLocalLlm({ baseUrl, model, systemPrompt, userPrompt, timeoutMs })
+        };
+      }
+      case 'openai-compatible': {
+        const { baseUrl, model, apiKey, timeoutMs } = resolveOpenAiCompatibleSettings(providerConfig);
+        return {
+          model,
+          call: ({ systemPrompt, userPrompt }) =>
+            callOpenAiCompatibleLlm({ baseUrl, model, apiKey, systemPrompt, userPrompt, timeoutMs })
+        };
+      }
+      case 'grok-cli': {
+        const { binaryPath, model, timeoutMs } = resolveGrokCliSettings(providerConfig);
+        return {
+          model: model ?? DEFAULT_GROK_MODEL,
+          call: ({ systemPrompt, userPrompt }) => callGrokCli({ binaryPath, model, systemPrompt, userPrompt, timeoutMs })
+        };
+      }
+      default:
+        throw new Error(`unsupported kind "${providerConfig.kind}"`);
+    }
+  } catch (error) {
+    throw wrapResolutionError(providerName, error);
+  }
+}
+import { appendEvent, queryEvents } from '../events/store.js';
+import { reserveBudget, settleReservation } from '../llm/budget.js';
+import { resolveProvider } from '../llm/registry.js';
+import {
+  normalizeInvestingOpportunityCandidate,
+  INVESTING_OPPORTUNITY_TYPE_EXAMPLES
+} from '../opportunities/investingSchema.js';
+
+const ROLE_NAME = 'opportunity.investing';
+
+function buildSystemPrompt(companyName) {
+  return [
+    `You are the ${ROLE_NAME} role inside e3d-corp, a system that helps ${companyName} form evidence-backed investment views.`,
+    'You are given one triggering event, structured E3D thesis/story evidence, and a current market-state snapshot.',
+    'Respond with ONLY a single JSON object — no prose, no markdown code fences — matching exactly this shape:',
+    '{"type": string, "title": string, "description": string, "view": "bullish"|"bearish"|"neutral", ' +
+      '"confidence": number, "rationale": string, "invalidationCondition": string, ' +
+      '"thesisRefs": string[], "storyRefs": string[], "evidenceEventIds": string[], ' +
+      '"wantsSecondOpinion"?: boolean, "secondOpinionReason"?: string}',
+    `"type" should be a short kebab-case string. Common examples: ${INVESTING_OPPORTUNITY_TYPE_EXAMPLES.join(', ')}.`,
+    '"view" is the directional investment stance implied by the evidence and market state.',
+    '"confidence" is your own confidence in that investment view, from 0 to 1.',
+    '"invalidationCondition" must name the concrete condition that would make this view no longer worth acting on.',
+    '"thesisRefs" must only contain thesis ids from the E3D theses list below. "storyRefs" must only contain story ids from the E3D stories list below.',
+    '"evidenceEventIds" must only contain ids taken from the evidence list you were given below — never invent one.',
+    'If the evidence is mixed or weak, prefer "neutral" plus low confidence over forcing a tradeable view.',
+    'Never invent a thesis, a story, a market datapoint, or a reference id that is not present in the provided inputs.',
+    'Set "wantsSecondOpinion" to true only when another provider perspective would materially help; when you do, include "secondOpinionReason".',
+    'Never respond with free text instead of JSON, in any case.'
+  ].join('\n');
+}
+
+function truncate(text, maxLength) {
+  if (typeof text !== 'string') return text;
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+}
+
+function pickString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function pickRefId(item) {
+  return pickString(item?.id, item?.thesisId, item?.storyId, item?.refId, item?.slug);
+}
+
+function normalizeEvidenceItem(item, fallbackKind = 'market') {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const refId = pickRefId(item);
+  return {
+    id: refId,
+    kind: pickString(item.kind, item.type, item.objectType, item.entityType, fallbackKind) ?? fallbackKind,
+    title: pickString(item.title, item.name, item.headline, item.symbol) ?? 'Untitled evidence',
+    summary: truncate(pickString(item.summary, item.snippet, item.description, item.content, item.note) ?? '', 400),
+    market: pickString(item.market, item.chain, item.exchange),
+    asset: pickString(item.asset, item.token, item.symbol)
+  };
+}
+
+function lower(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function classifyEvidenceItem(item, fallbackKind = 'market') {
+  const normalized = normalizeEvidenceItem(item, fallbackKind);
+  if (!normalized) {
+    return null;
+  }
+
+  const classification = lower(normalized.kind);
+  if (classification.includes('thesis')) {
+    return { bucket: 'theses', item: normalized };
+  }
+  if (classification.includes('story')) {
+    return { bucket: 'stories', item: normalized };
+  }
+  return { bucket: 'marketEvidence', item: normalized };
+}
+
+function collectClassifiedItems(result, explicitBucket, items) {
+  if (!Array.isArray(items)) {
+    return;
+  }
+  for (const item of items) {
+    const classified =
+      explicitBucket === 'marketEvidence'
+        ? { bucket: explicitBucket, item: normalizeEvidenceItem(item, 'market') }
+        : classifyEvidenceItem(item, explicitBucket === 'theses' ? 'thesis' : 'story');
+    if (classified?.item) {
+      result[classified.bucket].push(classified.item);
+    }
+  }
+}
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { appendEvent, queryEvents } from '../lib/events/store.js';
+import {
+  buildPrompt,
+  parseCandidateJson,
+  runInvestingOpportunityScorer
+} from '../lib/roles/investingOpportunity.js';
+import {
+  normalizeInvestingOpportunityCandidate,
+  validateInvestingOpportunityCandidate
+} from '../lib/opportunities/investingSchema.js';
+
+const ORIGINAL_ENV = {
+  LLM_BASE_URL: process.env.LLM_BASE_URL,
+  LLM_MODEL: process.env.LLM_MODEL
+};
+
+process.env.LLM_BASE_URL = process.env.LLM_BASE_URL ?? 'http://127.0.0.1:9999';
+process.env.LLM_MODEL = process.env.LLM_MODEL ?? 'test-local-model';
+
+test.after(() => {
+  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  }
+});
+
+function makeTempDataDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'e3d-corp-investing-role-'));
+}
+
+function minimalInstanceConfig(overrides = {}) {
+  return {
+    name: 'futco',
+    llm: {
+      providers: {
+        local: { kind: 'local', baseUrlEnvVar: 'LLM_BASE_URL', modelEnvVar: 'LLM_MODEL' }
+      }
+    },
+    research: {
+      knowledgeBaseMcpUrl: 'http://127.0.0.1:4110',
+      knowledgeBaseMcpServerPath: '../futco-mcp/server.js',
+      webSearchProvider: 'disabled'
+    },
+    roles: { 'opportunity.investing': { provider: 'local' } },
+    ...overrides
+  };
+}
+
+function llmResponse(text, overrides = {}) {
+  return {
+    text,
+    usage: { promptTokens: 31, completionTokens: 19, totalTokens: 50 },
+    costUsd: null,
+    ...overrides
+  };
+}
+
+function stubLlmClientReturning(candidate) {
+  return async () => llmResponse(typeof candidate === 'string' ? candidate : JSON.stringify(candidate));
+}
+
+function validCandidate(overrides = {}) {
+  return {
+    type: 'long-idea',
+    title: 'Stay long SOL while stablecoin flows keep accelerating',
+    description: 'SOL retains constructive positioning because thesis demand and story flow both remain supportive.',
+    view: 'bullish',
+    confidence: 0.78,
+    rationale: 'Active thesis support aligns with fresh story momentum and a healthy current market backdrop.',
+    invalidationCondition: 'Invalidate if stablecoin inflows reverse and story activity falls materially for multiple sessions.',
+    thesisRefs: ['thesis-sol-1'],
+    storyRefs: ['story-sol-1'],
+    evidenceEventIds: ['evidence-1'],
+    ...overrides
+  };
+}
+
+function investingEvidenceEvent(overrides = {}) {
+  return {
+    id: 'evidence-1',
+    type: 'evidence.gathered',
+    occurredAt: '2026-08-27T12:00:00.000Z',
+    source: 'research.knowledgeBase',
+    subject: { type: 'research', id: 'research-1' },
+    payload: {
+      kind: 'knowledge-base-search',
+      query: 'sol thesis and story state',
+      resultSummary: 'One thesis, one story, and one market snapshot',
+      degraded: false,
+      result: {
+        theses: [
+          {
+            id: 'thesis-sol-1',
+            type: 'thesis',
+            title: 'Stablecoin liquidity keeps Solana structurally bid',
+            summary: 'Liquidity migration into the chain remains constructive.'
+          }
+        ],
+        stories: [
+          {
+            id: 'story-sol-1',
+            type: 'story',
+            title: 'On-chain wallet activity is accelerating',
+            summary: 'Wallet growth and transactions both inflected up this week.'
+          }
+        ],
+        marketState: [
+          {
+            id: 'market-sol-1',
+            type: 'market-state',
+            title: 'SOL price structure',
+            summary: 'Higher highs and higher lows versus the weekly range.'
+          }
+        ]
+      }
+    },
+    causationId: 'trigger-1',
+    correlationId: 'corr-investing-1',
+    ...overrides
+  };
+}
+
+test('buildPrompt separates E3D theses, stories, and market state for the investing role', () => {
+  const triggerEvent = {
+    id: 'trigger-1',
+    type: 'investment.signal.detected',
+    occurredAt: '2026-08-27T11:00:00.000Z',
+    source: 'manual',
+    subject: { type: 'market-signal', id: 'sol' },
+    payload: {
+      marketTopic: 'Solana',
+      marketState: { regime: 'risk-on', breadth: 'improving' }
+    },
+    correlationId: 'corr-investing-1'
+  };
+
+  const { systemPrompt, userPrompt } = buildPrompt({
+    triggerEvent,
+    evidenceEvents: [investingEvidenceEvent()],
+    instanceConfig: minimalInstanceConfig(),
+    marketState: triggerEvent.payload.marketState
+  });
+
+  assert.match(systemPrompt, /opportunity\.investing/);
+  const parsed = JSON.parse(userPrompt);
+  assert.deepEqual(parsed.marketState, { regime: 'risk-on', breadth: 'improving' });
+  assert.equal(parsed.evidence.theses.length, 1);
+  assert.equal(parsed.evidence.theses[0].id, 'thesis-sol-1');
+  assert.equal(parsed.evidence.stories.length, 1);
+  assert.equal(parsed.evidence.stories[0].id, 'story-sol-1');
+  assert.equal(parsed.evidence.marketEvidence.length, 1);
+  assert.equal(parsed.evidence.evidenceEvents[0].id, 'evidence-1');
+
+codex
+The prototype fits cleanly in one implementation phase: a manual `request submit` command, a schema-validating `risk.assess` role, one level-3 policy entry, and focused end-to-end tests. No executor or external integration is needed, which preserves the human gate and keeps the change well below the size limits.
+exec
+/bin/zsh -lc "rg -n \"roles|opportunity\\.communicator|opportunity\\.investing\" lib/config.js .e3d-corp/config.schema.json examples/instance.example.json; sed -n '1,260p' lib/roles/communicator.js; sed -n '180,380p' lib/config.js; sed -n '130,235p' lib/cli.js; sed -n '985,1135p' lib/cli.js; sed -n '1,220p' test/capitalMandateProposal.test.js" in /Users/mini/e3d-corp
+ succeeded in 0ms:
+lib/config.js:149:  if (isPlainObject(config.roles)) {
+lib/config.js:150:    for (const [roleName, roleConfig] of Object.entries(config.roles)) {
+lib/config.js:152:        legacyFields.push(`roles.${roleName}.model`);
+lib/config.js:255:  validateObjectField(errors, config.roles, 'roles');
+lib/config.js:256:  if (isPlainObject(config.roles)) {
+lib/config.js:258:    for (const [roleName, roleConfig] of Object.entries(config.roles)) {
+lib/config.js:259:      const rolePath = `roles.${roleName}`;
+.e3d-corp/config.schema.json:6:  "required": ["name", "dataDir", "llm", "research", "eventSources", "roles"],
+.e3d-corp/config.schema.json:109:    "roles": {
+examples/instance.example.json:19:  "roles": {
+examples/instance.example.json:23:    "opportunity.investing": {
+examples/instance.example.json:26:    "opportunity.communicator": {
+import { reconstructChain } from '../events/chain.js';
+import { appendEvent } from '../events/store.js';
+import { resolveProvider } from '../llm/registry.js';
+import { createProposal } from '../proposals/create.js';
+
+const ROLE_NAME = 'opportunity.communicator';
+
+function buildSystemPrompt(companyName) {
+  return [
+    `You are the opportunity.communicator role inside e3d-corp, a system that helps ${companyName} pursue real, ` +
+      'evidence-backed business opportunities.',
+    'You are given one Opportunity that a human has already reviewed and marked "pursuing", plus the full ' +
+      `causal chain of events that led to it (the original trigger, research evidence gathered from ${companyName}'s own ` +
+      'knowledge base and the web, scoring, and the human decision).',
+    'Draft outreach content (a short email) that a human will review and approve before anything is sent - you ' +
+      'never send anything yourself.',
+    'Respond with ONLY a single JSON object - no prose, no markdown code fences - matching exactly this shape:',
+    '{"subject": string, "body": string, "rationale": string}',
+    '"subject" is a short, specific email subject line - never generic ("Following up" is not acceptable; name ' +
+      'the actual opportunity).',
+    '"body" is the full email body, written for the specific recipient/context in the evidence below - reference ' +
+      'a concrete detail from the evidence, not a generic pitch.',
+    `Never claim a ${companyName} capability, product, or track record that isn't directly supported by the evidence ` +
+      'provided below - if the evidence is thin, write a shorter, more modest email rather than inventing detail.',
+    'Do not include a recipient address, greeting placeholder like "[Name]", or signature block - those are ' +
+      'filled in outside this draft.',
+    '"rationale" briefly explains why this outreach and this specific angle, citing the evidence.',
+    'Never respond with free text instead of JSON, in any case.'
+  ].join('\n');
+}
+
+function isNonEmptyString(value) {
+  return typeof value === 'string' && value.trim() !== '';
+}
+
+export function validateOutreachDraft(draft) {
+  const errors = [];
+
+  if (draft === null || typeof draft !== 'object' || Array.isArray(draft)) {
+    return { valid: false, errors: ['draft: must be an object'] };
+  }
+
+  if (!isNonEmptyString(draft.subject)) {
+    errors.push('subject: must be a non-empty string');
+  }
+  if (!isNonEmptyString(draft.body)) {
+    errors.push('body: must be a non-empty string');
+  }
+  if (!isNonEmptyString(draft.rationale)) {
+    errors.push('rationale: must be a non-empty string');
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+export function normalizeOutreachDraft(draft) {
+  const { valid, errors } = validateOutreachDraft(draft);
+  if (!valid) {
+    throw new Error(`Invalid outreach draft:\n- ${errors.join('\n- ')}`);
+  }
+
+  return {
+    subject: draft.subject.trim(),
+    body: draft.body.trim(),
+    rationale: draft.rationale.trim()
+  };
+}
+
+// Local models sometimes wrap otherwise-correct JSON in a markdown fence
+// despite instructions not to - same normalization opportunityProspect.js
+// applies before a strict JSON.parse.
+function stripMarkdownFence(rawText) {
+  const trimmed = rawText.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced ? fenced[1].trim() : trimmed;
+}
+
+export function parseDraftJson(rawText) {
+  if (typeof rawText !== 'string' || rawText.trim() === '') {
+    throw new Error('opportunity.communicator returned empty output');
+  }
+
+  try {
+    return JSON.parse(stripMarkdownFence(rawText));
+  } catch (error) {
+    throw new Error(`opportunity.communicator returned invalid JSON: ${error.message}`);
+  }
+}
+
+function truncate(text, maxLength) {
+  if (typeof text !== 'string') return text;
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+}
+
+function summarizeChainEvent(event) {
+  return {
+    id: event.id,
+    type: event.type,
+    occurredAt: event.occurredAt,
+    payload: truncate(JSON.stringify(event.payload), 1200)
+  };
+}
+
+// Deterministic, not LLM-derived: a role should never hallucinate an email
+// address. Prefers a real contact captured from an inbound lead; falls back
+// to the instance's configured routing address (e.g. an internal inbox) for
+// opportunities that never had a direct external contact (discovery-pass
+// market signals), and refuses outright if neither is available.
+export function deriveRecipient({ chain, instanceConfig }) {
+  const leadEvent = [...chain]
+    .reverse()
+    .find((event) => event.type === 'lead.received' && isNonEmptyString(event.payload?.submission?.email));
+  if (leadEvent) {
+    return leadEvent.payload.submission.email.trim();
+  }
+
+  const fallback = instanceConfig?.outreach?.fallbackToEmail;
+  if (isNonEmptyString(fallback)) {
+    return fallback.trim();
+  }
+
+  return null;
+}
+
+export function buildPrompt({ opportunity, chain, instanceConfig }) {
+  const userPrompt = JSON.stringify(
+    {
+      opportunity: {
+        id: opportunity.id,
+        type: opportunity.type,
+        title: opportunity.title,
+        description: opportunity.description,
+        score: opportunity.score
+      },
+      causalChain: chain.map(summarizeChainEvent)
+    },
+    null,
+    2
+  );
+
+  return { systemPrompt: buildSystemPrompt(instanceConfig?.name || 'the company'), userPrompt };
+}
+
+function normalizeProviderNames(providerConfig) {
+  if (typeof providerConfig === 'string' && providerConfig.trim() !== '') {
+    return [providerConfig.trim()];
+  }
+  if (Array.isArray(providerConfig) && providerConfig.length > 0) {
+    const names = providerConfig
+      .filter((name) => typeof name === 'string' && name.trim() !== '')
+      .map((name) => name.trim());
+    if (names.length > 0) {
+      return names;
+    }
+  }
+  throw new Error(`Instance config is missing roles.${ROLE_NAME}.provider`);
+}
+
+function resolveProviderCalls({ instanceConfig, providerNames, llmClient }) {
+  if (!llmClient) {
+    const calls = [];
+    const failures = [];
+    providerNames.forEach((provider) => {
+      try {
+        const resolved = resolveProvider(instanceConfig, provider);
+        calls.push({ provider, model: resolved.model, call: resolved.call });
+      } catch (error) {
+        failures.push({ provider, error });
+      }
+    });
+    return { calls, failures };
+  }
+
+  if (typeof llmClient === 'function') {
+    if (providerNames.length !== 1) {
+      throw new Error('runOpportunityCommunicator received a single llmClient function for a multi-provider role');
+    }
+    const [provider] = providerNames;
+    const { model } = resolveProvider(instanceConfig, provider);
+    return { calls: [{ provider, model, call: llmClient }], failures: [] };
+  }
+
+  if (llmClient && typeof llmClient === 'object') {
+    const calls = [];
+    const failures = [];
+    providerNames.forEach((provider) => {
+      try {
+        const call = llmClient[provider];
+        if (typeof call !== 'function') {
+          throw new Error(`runOpportunityCommunicator is missing an llmClient stub for provider "${provider}"`);
+        }
+        const { model } = resolveProvider(instanceConfig, provider);
+        calls.push({ provider, model, call });
+      } catch (error) {
+        failures.push({ provider, error });
+      }
+    });
+    return { calls, failures };
+  }
+
+  throw new Error('runOpportunityCommunicator requires llmClient to be a function or provider map when provided');
+}
+
+function recordProviderCompletion({ dataDir, causationId, opportunity, provider, model, usage, costUsd, latencyMs }) {
+  appendEvent(dataDir, {
+    type: 'role.provider.completed',
+    source: `role:${ROLE_NAME}`,
+    subject: { type: 'role', id: ROLE_NAME },
+    payload: { role: ROLE_NAME, provider, model, usage, costUsd, latencyMs },
+    causationId,
+    correlationId: opportunity.correlationId
+  });
+}
+
+function recordProviderFailure({ dataDir, causationId, opportunity, provider, model, usage, costUsd, latencyMs, reason }) {
+  appendEvent(dataDir, {
+    type: 'role.provider.failed',
+    source: `role:${ROLE_NAME}`,
+    subject: { type: 'role', id: ROLE_NAME },
+    payload: { role: ROLE_NAME, provider, model, usage, costUsd, latencyMs, reason },
+    causationId,
+    correlationId: opportunity.correlationId
+  });
+}
+
+function enrichProviderError(error, { usage, costUsd, latencyMs }) {
+  const enriched = error instanceof Error ? error : new Error(String(error));
+  enriched.usage = usage ?? null;
+  enriched.costUsd = costUsd ?? null;
+  enriched.latencyMs = latencyMs ?? null;
+  return enriched;
+}
+
+function latestEventForOpportunity(chain, opportunityId) {
+  const related = chain.filter((event) => event.subject?.type === 'opportunity' && event.subject.id === opportunityId);
+  return related[related.length - 1] ?? chain[chain.length - 1] ?? null;
+}
+
+// Authority level 0/1 read + an authority-level-1 write (creating the
+// Proposal itself is internal/reversible, exactly like Phase 4's Opportunity
+// creation) - what the Proposal proposes (actually sending the email) is
+// authority level 2 and requires a human Decision, enforced by
+// lib/actions/sendOutreach.js, never here. This function creates a Proposal
+// and nothing else; it never sends anything under any circumstance.
+export async function runOpportunityCommunicator({
+  instanceConfig,
+  dataDir,
+  opportunity,
+  researchAdapter,
+  llmClient
+} = {}) {
+  if (!opportunity || !opportunity.id || !opportunity.correlationId) {
+    throw new Error('runOpportunityCommunicator requires an opportunity with an id and correlationId');
+  }
+  if (opportunity.status !== 'pursuing') {
+    throw new Error(
+      `Opportunity ${opportunity.id} is not "pursuing" (status: ${opportunity.status}); refusing to draft outreach`
+    );
+  }
+  if (!dataDir) {
+    case 'local':
+      validateStringField(errors, providerConfig.baseUrlEnvVar, `${providerPath}.baseUrlEnvVar`);
+      validateStringField(errors, providerConfig.modelEnvVar, `${providerPath}.modelEnvVar`);
+      validateOptionalIntegerField(errors, providerConfig.timeoutMs, `${providerPath}.timeoutMs`);
+      break;
+    case 'openai-compatible':
+      validateStringField(errors, providerConfig.baseUrlEnvVar, `${providerPath}.baseUrlEnvVar`);
+      validateStringField(errors, providerConfig.modelEnvVar, `${providerPath}.modelEnvVar`);
+      validateStringField(errors, providerConfig.apiKeyEnvVar, `${providerPath}.apiKeyEnvVar`);
+      validateOptionalIntegerField(errors, providerConfig.timeoutMs, `${providerPath}.timeoutMs`);
+      break;
+    case 'grok-cli':
+      validateOptionalStringField(errors, providerConfig.binEnvVar, `${providerPath}.binEnvVar`);
+      validateOptionalStringField(errors, providerConfig.modelEnvVar, `${providerPath}.modelEnvVar`);
+      validateOptionalIntegerField(errors, providerConfig.timeoutMs, `${providerPath}.timeoutMs`);
+      break;
+    default:
+      addError(errors, `${providerPath}.kind`, 'must be one of: local, openai-compatible, grok-cli');
+      break;
+  }
+}
+
+export function validateInstanceConfig(config) {
+  const errors = [];
+
+  validateObjectField(errors, config, 'config');
+  if (!isPlainObject(config)) {
+    return { valid: false, errors };
+  }
+
+  validateStringField(errors, config.name, 'name');
+  validateStringField(errors, config.dataDir, 'dataDir');
+
+  const legacyLlmFields = detectLegacyLlmConfig(config);
+  if (legacyLlmFields.length > 0) {
+    addError(
+      errors,
+      'llm.providers',
+      `replace legacy provider fields (${legacyLlmFields.join(', ')}) with the llm.providers registry`
+    );
+  }
+
+  validateObjectField(errors, config.llm, 'llm');
+  if (isPlainObject(config.llm)) {
+    validateObjectField(errors, config.llm.providers, 'llm.providers');
+    const providerNames = isPlainObject(config.llm.providers) ? new Set(Object.keys(config.llm.providers)) : null;
+    if (isPlainObject(config.llm.providers)) {
+      const providerEntries = Object.entries(config.llm.providers);
+      if (providerEntries.length === 0) {
+        addError(errors, 'llm.providers', 'must define at least one provider');
+      }
+      for (const [providerName, providerConfig] of providerEntries) {
+        validateProviderConfig(errors, providerName, providerConfig);
+      }
+    }
+    if (config.llm.budget !== undefined) {
+      validateBudgetConfig(errors, config.llm.budget, providerNames);
+    }
+  }
+
+  validateObjectField(errors, config.research, 'research');
+  if (isPlainObject(config.research)) {
+    if (config.research.knowledgeBaseMcpUrl !== undefined) {
+      validateStringField(errors, config.research.knowledgeBaseMcpUrl, 'research.knowledgeBaseMcpUrl');
+    }
+    if (config.research.knowledgeBaseMcpServerPath !== undefined) {
+      validateStringField(errors, config.research.knowledgeBaseMcpServerPath, 'research.knowledgeBaseMcpServerPath');
+    }
+    validateStringField(errors, config.research.webSearchProvider, 'research.webSearchProvider');
+  }
+
+  if (!Array.isArray(config.eventSources)) {
+    addError(errors, 'eventSources', 'must be an array');
+  }
+
+  validateObjectField(errors, config.roles, 'roles');
+  if (isPlainObject(config.roles)) {
+    const providerNames = isPlainObject(config.llm?.providers) ? new Set(Object.keys(config.llm.providers)) : null;
+    for (const [roleName, roleConfig] of Object.entries(config.roles)) {
+      const rolePath = `roles.${roleName}`;
+      validateObjectField(errors, roleConfig, rolePath);
+      if (isPlainObject(roleConfig)) {
+        validateProviderReferenceField(errors, roleConfig.provider, `${rolePath}.provider`, providerNames);
+      }
+    }
+  }
+
+  if (config.web !== undefined) {
+    validateObjectField(errors, config.web, 'web');
+    if (isPlainObject(config.web)) {
+      validateStringField(errors, config.web.authUserEnvVar, 'web.authUserEnvVar');
+      validateStringField(errors, config.web.authPassEnvVar, 'web.authPassEnvVar');
+      validateIntegerField(errors, config.web.port, 'web.port');
+    }
+  }
+
+  if (config.calendar !== undefined) {
+    validateObjectField(errors, config.calendar, 'calendar');
+    if (isPlainObject(config.calendar)) {
+      validateStringField(errors, config.calendar.provider, 'calendar.provider');
+      validateStringField(errors, config.calendar.calendarId, 'calendar.calendarId');
+      validateStringField(errors, config.calendar.organizerEmail, 'calendar.organizerEmail');
+      validateStringField(errors, config.calendar.serviceAccountKeyFileEnvVar, 'calendar.serviceAccountKeyFileEnvVar');
+    }
+  }
+
+  if (config.leadWebhook !== undefined) {
+    validateObjectField(errors, config.leadWebhook, 'leadWebhook');
+    if (isPlainObject(config.leadWebhook)) {
+      validateStringField(errors, config.leadWebhook.tokenEnvVar, 'leadWebhook.tokenEnvVar');
+    }
+  }
+
+  if (config.tradeOutcomeWebhook !== undefined) {
+    validateObjectField(errors, config.tradeOutcomeWebhook, 'tradeOutcomeWebhook');
+    if (isPlainObject(config.tradeOutcomeWebhook)) {
+      validateStringField(errors, config.tradeOutcomeWebhook.tokenEnvVar, 'tradeOutcomeWebhook.tokenEnvVar');
+    }
+  }
+
+  if (config.authorityNotify !== undefined) {
+    validateObjectField(errors, config.authorityNotify, 'authorityNotify');
+    if (isPlainObject(config.authorityNotify)) {
+      if (config.authorityNotify.email !== undefined) {
+        validateStringField(errors, config.authorityNotify.email, 'authorityNotify.email');
+      }
+      if (config.authorityNotify.command !== undefined) {
+        validateStringField(errors, config.authorityNotify.command, 'authorityNotify.command');
+      }
+    }
+  }
+
+  if (config.outreach !== undefined) {
+    validateObjectField(errors, config.outreach, 'outreach');
+    if (isPlainObject(config.outreach)) {
+      validateStringField(errors, config.outreach.provider, 'outreach.provider');
+      validateStringField(errors, config.outreach.region, 'outreach.region');
+      validateStringField(errors, config.outreach.fromEmail, 'outreach.fromEmail');
+      if (config.outreach.fallbackToEmail !== undefined) {
+        validateStringField(errors, config.outreach.fallbackToEmail, 'outreach.fallbackToEmail');
+      }
+    }
+  }
+
+  if (config.e3dTrade !== undefined) {
+    validateObjectField(errors, config.e3dTrade, 'e3dTrade');
+    if (isPlainObject(config.e3dTrade)) {
+      validateStringField(errors, config.e3dTrade.baseUrl, 'e3dTrade.baseUrl');
+      validateOptionalStringField(errors, config.e3dTrade.mandatePath, 'e3dTrade.mandatePath');
+      validateOptionalStringField(errors, config.e3dTrade.apiKeyEnvVar, 'e3dTrade.apiKeyEnvVar');
+      validateOptionalStringField(errors, config.e3dTrade.sessionCookieEnvVar, 'e3dTrade.sessionCookieEnvVar');
+      validateOptionalIntegerField(errors, config.e3dTrade.timeoutMs, 'e3dTrade.timeoutMs');
+      validateOptionalIntegerField(errors, config.e3dTrade.maxAttempts, 'e3dTrade.maxAttempts');
+    }
+  }
+
+  if (config.anchor !== undefined) {
+    validateObjectField(errors, config.anchor, 'anchor');
+    if (isPlainObject(config.anchor)) {
+      validateStringField(errors, config.anchor.provider, 'anchor.provider');
+      validateStringField(errors, config.anchor.toEmailEnvVar, 'anchor.toEmailEnvVar');
+    }
+  }
+
+  if (config.researchTopics !== undefined) {
+    if (!Array.isArray(config.researchTopics)) {
+      addError(errors, 'researchTopics', 'must be an array');
+    } else {
+      config.researchTopics.forEach((topic, index) => {
+        validateStringField(errors, topic, `researchTopics[${index}]`);
+      });
+    }
+  }
+
+  if (config.ownDomains !== undefined) {
+    if (!Array.isArray(config.ownDomains)) {
+      addError(errors, 'ownDomains', 'must be an array');
+    } else {
+      config.ownDomains.forEach((domain, index) => {
+        validateStringField(errors, domain, `ownDomains[${index}]`);
+      });
+    }
+  }
+
+  if (config.scoring !== undefined) {
+    validateObjectField(errors, config.scoring, 'scoring');
+    if (isPlainObject(config.scoring)) {
+      if (config.scoring.weights !== undefined) {
+        validateObjectField(errors, config.scoring.weights, 'scoring.weights');
+        if (isPlainObject(config.scoring.weights)) {
+          for (const key of ['confidence', 'evidenceCount', 'recency']) {
+            if (config.scoring.weights[key] !== undefined && typeof config.scoring.weights[key] !== 'number') {
+              addError(errors, `scoring.weights.${key}`, 'must be a number');
+            }
+          }
+        }
+      }
+      if (config.scoring.typeWeights !== undefined) {
+        validateObjectField(errors, config.scoring.typeWeights, 'scoring.typeWeights');
+        if (isPlainObject(config.scoring.typeWeights)) {
+          for (const [type, weight] of Object.entries(config.scoring.typeWeights)) {
+}
+
+function eventAddCommand(args) {
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+    return 0;
+  }
+
+  const flags = parseFlags(args);
+  const { type, source, payload: payloadRaw, correlation, causation } = flags;
+
+  if (!type || !source || payloadRaw === undefined) {
+    process.stderr.write('event add requires --type, --source, and --payload\n');
+    return 1;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(payloadRaw);
+  } catch (error) {
+    process.stderr.write(`Invalid JSON for --payload: ${error.message}\n`);
+    return 1;
+  }
+
+  const instanceName = flags.instance;
+  if (!instanceName) {
+    process.stderr.write('Missing required --instance <name>\n');
+    return 1;
+  }
+  const { dataDir } = loadInstance(instanceName);
+
+  const record = appendEvent(dataDir, {
+    type,
+    source,
+    payload,
+    correlationId: correlation ?? crypto.randomUUID(),
+    causationId: causation ?? null,
+    subject: {
+      type: flags['subject-type'] ?? type,
+      id: flags['subject-id'] ?? crypto.randomUUID()
+    }
+  });
+
+  process.stdout.write(`Added event ${record.id} (type=${record.type}, correlationId=${record.correlationId})\n`);
+  return 0;
+}
+
+// A hash chain nobody checks is decoration. This is the check: it exits
+// non-zero on a broken chain so a scheduled run can alert on it, and names
+// the first bad record rather than just reporting a boolean.
+function eventVerifyCommand(args) {
+  if (args.includes('--help') || args.includes('-h')) {
+    printHelp();
+    return 0;
+  }
+
+  const flags = parseFlags(args);
+  const instanceName = flags.instance;
+  if (!instanceName) {
+    process.stderr.write('Missing required --instance <name>\n');
+    return 1;
+  }
+  const { dataDir } = loadInstance(instanceName);
+
+  const result = verifyEventChain(dataDir);
+  const unchainedNote =
+    result.unchained > 0
+      ? ` (${result.unchained} written before chaining, sealed by the first chained record)`
+      : '';
+
+  if (!result.valid) {
+    process.stderr.write(`Event chain BROKEN at record ${result.brokenAt}: ${result.reason}\n`);
+    return 1;
+  }
+
+  process.stdout.write(
+    `Event chain intact: ${result.chained} of ${result.total} records verified${unchainedNote}\n`
+  );
+
+  // An anchor read off an email is the strongest check available: its
+  // reference value never lived in the file being checked, so it is the only
+  // one that can catch a truncated tail or a rewrite that also deleted the
+  // in-log anchors.
+  if (flags.head || flags.count) {
+    if (!flags.head || !flags.count) {
+      process.stderr.write('event verify requires both --head and --count when checking an emailed anchor\n');
+      return 1;
+    }
+    const external = verifyExternalAnchor(dataDir, { head: flags.head, count: Number(flags.count) });
+    if (!external.valid) {
+      process.stderr.write(`Emailed anchor FAILS: ${external.reason}\n`);
+      return 1;
+    }
+    process.stdout.write(
+      `Emailed anchor verified: the first ${external.count} of ${external.currentCount} records are unchanged since it was published\n`
+    );
+    return 0;
+  }
+
+  // The chain proves no partial edit. In-log anchors additionally prove no
+  // full rewrite. Neither can prove the tail was not cut - that needs the
+  // emailed copy above, so a pass here is reported for exactly what it covers.
+  const anchors = verifyAgainstAnchors(dataDir);
+
+  if (anchors.anchorCount === 0) {
+    process.stdout.write(
+    for (const check of status.checks) {
+      process.stdout.write(`  - ${check.message}\n`);
+    }
+  }
+
+  return allReady ? 0 : 1;
+}
+
+export async function run(argv = process.argv.slice(2)) {
+  try {
+    if (normalizeHelpFlag(argv)) {
+      printHelp();
+      return 0;
+    }
+
+    const [group, subcommand, ...rest] = argv;
+
+    if (group === 'config' && subcommand === 'validate') {
+      return validateConfigCommand(rest);
+    }
+
+    if (group === 'config') {
+      printHelp();
+      process.stderr.write(`Unknown config command: ${subcommand ?? ''}\n`);
+      return 1;
+    }
+
+    if (group === 'providers' && subcommand === 'status') {
+      return providersStatusCommand(rest);
+    }
+
+    if (group === 'providers') {
+      printHelp();
+      process.stderr.write(`Unknown providers command: ${subcommand ?? ''}\n`);
+      return 1;
+    }
+
+    if (group === 'budget' && subcommand === 'status') {
+      return budgetStatusCommand(rest);
+    }
+
+    if (group === 'budget') {
+      printHelp();
+      process.stderr.write(`Unknown budget command: ${subcommand ?? ''}\n`);
+      return 1;
+    }
+
+    if (group === 'event' && subcommand === 'add') {
+      return eventAddCommand(rest);
+    }
+
+    if (group === 'event' && subcommand === 'log') {
+      return eventLogCommand(rest);
+    }
+
+    if (group === 'event' && subcommand === 'verify') {
+      return eventVerifyCommand(rest);
+    }
+
+    if (group === 'anchor' && subcommand === 'publish') {
+      return await anchorPublishCommand(rest);
+    }
+
+    if (group === 'anchor') {
+      printHelp();
+      process.stderr.write(`Unknown anchor command: ${subcommand ?? ''}\n`);
+      return 1;
+    }
+
+    if (group === 'event') {
+      printHelp();
+      process.stderr.write(`Unknown event command: ${subcommand ?? ''}\n`);
+      return 1;
+    }
+
+    if (group === 'run') {
+      return await runCommand(argv.slice(1));
+    }
+
+    if (group === 'pursue') {
+      return await pursueCommand(argv.slice(1));
+    }
+
+    if (group === 'opportunities' && subcommand === 'list') {
+      return opportunitiesListCommand(rest);
+    }
+
+    if (group === 'opportunities' && subcommand === 'show') {
+      return opportunitiesShowCommand(rest);
+    }
+
+    if (group === 'opportunities' && subcommand === 'decide') {
+      return opportunitiesDecideCommand(rest);
+    }
+
+    if (group === 'opportunities' && subcommand === 'propose-handoff') {
+      return opportunitiesProposeHandoffCommand(rest);
+    }
+
+    if (group === 'opportunities' && subcommand === 'check-shipped') {
+      return await opportunitiesCheckShippedCommand(rest);
+    }
+
+    if (group === 'proposals' && subcommand === 'list') {
+      return proposalsListCommand(rest);
+    }
+
+    if (group === 'proposals' && subcommand === 'show') {
+      return proposalsShowCommand(rest);
+    }
+
+    if (group === 'proposals' && subcommand === 'approve') {
+      return await proposalsDecideCommand(rest, 'approved');
+    }
+
+    if (group === 'proposals' && subcommand === 'reject') {
+      return await proposalsDecideCommand(rest, 'rejected');
+    }
+
+    if (group === 'proposals' && subcommand === 'confirm') {
+      return await proposalsConfirmCommand(rest);
+    }
+
+    if (group === 'web') {
+      return webCommand(argv.slice(1));
+    }
+
+    if (group === 'outcomes' && subcommand === 'record') {
+      return outcomesRecordCommand(rest);
+    }
+
+    if (group === 'experience' && subcommand === 'show') {
+      return experienceShowCommand(rest);
+    }
+
+    if (group === 'evaluate' && subcommand === 'report') {
+      return evaluateReportCommand(rest);
+    }
+
+    const commandPath = [group, subcommand].filter(Boolean).join(' ');
+    const hasKnownStub =
+      group === 'opportunities' ||
+      group === 'proposals' ||
+      group === 'outcomes' ||
+      group === 'experience' ||
+      group === 'evaluate';
+
+    if (hasKnownStub) {
+      printNotImplemented(commandPath || group);
+      return 1;
+    }
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import test from 'node:test';
+import { appendEvent, queryEvents } from '../lib/events/store.js';
+import { AUTHORITY_LEVELS, assertProposalAuthorized, getRequiredAuthorityLevel } from '../lib/authority/policy.js';
+import { decideProposal, confirmAndExecute } from '../lib/decisions/decide.js';
+import { createProposal } from '../lib/proposals/create.js';
+import { proposeCapitalMandate } from '../lib/proposals/capitalMandate.js';
+import {
+  CAPITAL_MANDATE_STATUSES,
+  normalizeCapitalMandatePayload,
+  validateCapitalMandatePayload,
+  validateCapitalMandateTransition
+} from '../lib/proposals/capitalMandateSchema.js';
+import { getProposal } from '../lib/proposals/store.js';
+
+function makeTempDataDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'e3d-corp-capital-mandate-'));
+}
+
+function proposedBy(overrides = {}) {
+  return { role: 'opportunity.investing', provider: 'local', model: 'test-model', ...overrides };
+}
+
+function validMandate(overrides = {}) {
+  return {
+    owner: 'futco',
+    expires_at: '2026-12-31T00:00:00.000Z',
+    thesis_refs: ['thesis-btc-liquidity'],
+    story_refs: ['story-wallet-accumulation'],
+    objective: {
+      summary: 'Allocate paper capital only when E3D thesis and story evidence align with the current risk posture.'
+    },
+    constraints: {
+      max_position_pct: 0.12,
+      max_gross_exposure_pct: 0.35,
+      allowed_assets: ['BTC', 'ETH'],
+      blocked_assets: ['DOGE'],
+      paper_only: true,
+      live_execution_allowed: false,
+      risk_sovereign: true
+    },
+    preferences: {
+      discovery_bias: ['high-conviction thesis refs', 'confirmed on-chain story flow']
+    },
+    horizon: {
+      min_days: 14,
+      max_days: 90
+    },
+    confidence: 0.73,
+    invalidation: 'Invalidate if story activity breaks down or risk rejects the exposure.',
+    ...overrides
+  };
+}
+
+function seedPursuingInvestingOpportunity(dataDir) {
+  const correlationId = 'capital-mandate-chain';
+  const signal = appendEvent(dataDir, {
+    type: 'investment.signal.detected',
+    source: 'manual',
+    subject: { type: 'market-signal', id: 'btc' },
+    payload: { topic: 'BTC liquidity' },
+    correlationId
+  });
+  const created = appendEvent(dataDir, {
+    type: 'opportunity.created',
+    source: 'role:opportunity.investing',
+    subject: { type: 'opportunity', id: 'opp-investing' },
+    payload: {
+      id: 'opp-investing',
+      type: 'long-idea',
+      title: 'BTC liquidity mandate',
+      description: 'E3D thesis and story evidence support a constrained paper allocation.',
+      view: 'bullish',
+      confidence: 0.73,
+      thesisRefs: ['thesis-btc-liquidity'],
+      storyRefs: ['story-wallet-accumulation'],
+      invalidationCondition: 'Invalidate if story activity breaks down.',
+      status: 'candidate',
+      sourceEventIds: [signal.id],
+      correlationId,
+      createdAt: signal.occurredAt,
+      proposedBy: proposedBy()
+    },
+    causationId: signal.id,
+    correlationId
+  });
+  appendEvent(dataDir, {
+    type: 'opportunity.reviewed',
+    source: 'decision:cli',
+    subject: { type: 'opportunity', id: 'opp-investing' },
+    payload: { decision: 'pursuing', status: 'pursuing', reason: 'Mandate-worthy', decidedBy: 'chris', via: 'cli' },
+    causationId: created.id,
+    correlationId
+  });
+
+  return {
+    id: 'opp-investing',
+    type: 'long-idea',
+    title: 'BTC liquidity mandate',
+    status: 'pursuing',
+    confidence: 0.73,
+    thesisRefs: ['thesis-btc-liquidity'],
+    storyRefs: ['story-wallet-accumulation'],
+    invalidationCondition: 'Invalidate if story activity breaks down.',
+    correlationId,
+    proposedBy: proposedBy()
+  };
+}
+
+test('capital_mandate schema validates the full lifecycle field set and deterministic mandate id', () => {
+  const normalized = normalizeCapitalMandatePayload(validMandate(), {
+    proposalId: 'proposal-1',
+    correlationId: 'corr-1',
+    createdAt: '2026-08-27T20:00:00.000Z'
+  });
+
+  assert.equal(normalized.version, '1.0');
+  assert.equal(normalized.status, 'proposed');
+  assert.equal(normalized.created_at, '2026-08-27T20:00:00.000Z');
+  assert.equal(normalized.proposal_id, 'proposal-1');
+  assert.equal(normalized.correlation_id, 'corr-1');
+  assert.equal(normalized.decision_id, null);
+  assert.equal(normalized.approved_at, null);
+  assert.equal(normalized.revoked_at, null);
+  assert.match(normalized.mandate_id, /^mandate_[0-9a-f]{24}$/);
+
+  const again = normalizeCapitalMandatePayload(validMandate(), {
+    proposalId: 'proposal-1',
+    correlationId: 'corr-1',
+    createdAt: '2026-08-27T20:00:00.000Z'
+  });
+  assert.equal(again.mandate_id, normalized.mandate_id);
+  assert.equal(validateCapitalMandatePayload(normalized).valid, true);
+});
+
+test('capital_mandate lifecycle accepts only the declared forward path', () => {
+  assert.deepEqual(CAPITAL_MANDATE_STATUSES, [
+    'proposed',
+    'approved',
+    'active',
+    'completed',
+    'expired',
+    'revoked',
+    'suspended'
+  ]);
+  assert.equal(validateCapitalMandateTransition('proposed', 'approved').valid, true);
+  assert.equal(validateCapitalMandateTransition('approved', 'active').valid, true);
+  assert.equal(validateCapitalMandateTransition('active', 'completed').valid, true);
+  assert.equal(validateCapitalMandateTransition('active', 'expired').valid, true);
+  assert.equal(validateCapitalMandateTransition('active', 'revoked').valid, true);
+  assert.equal(validateCapitalMandateTransition('active', 'suspended').valid, true);
+  assert.match(validateCapitalMandateTransition('proposed', 'active').errors[0], /cannot transition/);
+  assert.match(validateCapitalMandateTransition('revoked', 'active').errors[0], /cannot transition/);
+});
+
+test('capital_mandate constraints reject relaxation, override, bypass, and live-execution signals', () => {
+  assert.throws(
+    () =>
+      normalizeCapitalMandatePayload(validMandate({ constraints: { override_risk_rejection: true } }), {
+        proposalId: 'proposal-1',
+        correlationId: 'corr-1',
+        createdAt: '2026-08-27T20:00:00.000Z'
+      }),
+    /constraints may only tighten/
+  );
+  assert.throws(
+    () =>
+      normalizeCapitalMandatePayload(validMandate({ constraints: { live_execution_allowed: true } }), {
+        proposalId: 'proposal-1',
+        correlationId: 'corr-1',
+        createdAt: '2026-08-27T20:00:00.000Z'
+      }),
+    /cannot enable live execution/
+  );
+  assert.throws(
+    () =>
+      normalizeCapitalMandatePayload(validMandate({ constraints: { exposure: { operator: '>=', value: 0.9 } } }), {
+        proposalId: 'proposal-1',
+        correlationId: 'corr-1',
+        createdAt: '2026-08-27T20:00:00.000Z'
+      }),
+    /can signal loosening/
+  );
+  assert.throws(
+    () =>
+      normalizeCapitalMandatePayload(validMandate({ constraints: { note: 'bypass the deterministic risk gate' } }), {
+        proposalId: 'proposal-1',
+        correlationId: 'corr-1',
+        createdAt: '2026-08-27T20:00:00.000Z'
+      }),
+    /must not signal/
+  );
+});
+
+test('capital_mandate proposal uses the existing human-gated Proposal and Decision pipeline', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    const opportunity = seedPursuingInvestingOpportunity(dataDir);
+
+    const { proposal, event } = proposeCapitalMandate(dataDir, {
+      opportunity,
+      mandate: validMandate()
+    });
+
+    assert.equal(proposal.type, 'capital_mandate');
+    assert.equal(proposal.authorityLevel, AUTHORITY_LEVELS.FINANCIAL_ACTION);
+    assert.equal(getRequiredAuthorityLevel('capital_mandate'), AUTHORITY_LEVELS.FINANCIAL_ACTION);
+    assert.equal(proposal.status, 'pending');
+    assert.equal(proposal.payload.status, 'proposed');
+    assert.equal(proposal.payload.proposal_id, proposal.id);
+    assert.equal(proposal.payload.correlation_id, opportunity.correlationId);
+    assert.deepEqual(proposal.payload.thesis_refs, ['thesis-btc-liquidity']);
+    assert.deepEqual(proposal.payload.story_refs, ['story-wallet-accumulation']);
+    assert.equal(event.type, 'proposal.created');
+
+    assert.throws(() => assertProposalAuthorized(proposal, 'capital_mandate'), /not approved \(status: pending\)/);
+
+
+codex
+```spec
+# Inbound Payment Request Risk Guard Prototype
+
+## Overview
+
+Add a minimal inbound payment-request guard to the existing event-sourced runtime. A CLI command records a consequential request, invokes a structured `risk.assess` role with relevant vendor history from the event log, and creates a pending level-3 `flag-payment-request` Proposal containing a `HOLD`, `APPROVE`, or `CHECK` recommendation.
+
+The prototype stops at Proposal creation. It does not execute payments or register an action executor.
+
+## Goals
+
+- Accept payment requests through a dedicated CLI command.
+- Preserve each request as an append-only Company Event.
+- Assess requests through the configured `risk.assess` provider.
+- Ground assessments in relevant existing event-log history.
+- Strictly validate the role’s structured verdict.
+- Create a pending Proposal whose authority level is derived from policy.
+- Exercise the complete Event-to-Proposal path in automated tests.
+
+## Non-Goals
+
+- Gmail, Drive, accounting, banking, or payment-provider integrations.
+- Payment execution or an executor for `flag-payment-request`.
+- Web UI changes.
+- Decision, confirmation, Action, Outcome, or Experience workflow changes.
+- Automatic approval based on an `APPROVE` verdict.
+- New evidence providers, databases, or policy mechanisms.
+- General-purpose fraud detection or production-grade risk scoring.
+
+## Existing Files
+
+- `lib/cli.js` implements command routing, flag parsing, instance loading, and event creation.
+- `lib/events/store.js` provides append-only event storage and event queries.
+- `lib/roles/communicator.js` demonstrates configured-provider resolution, strict JSON role output, Proposal creation, and injectable LLM clients.
+- `lib/authority/policy.js` is the authoritative action-type-to-authority-level mapping.
+- `lib/proposals/create.js` derives authority from policy and appends `proposal.created`.
+- `examples/instance.example.json` demonstrates role-to-provider configuration.
+- Existing Node test suites use temporary data directories and injected provider clients.
+
+## Shared Constraints
+
+- Keep the implementation within 8 changed files and 650 changed lines.
+- Models may return structured recommendations but must never append Decisions or execute Actions.
+- `authorityLevel` must be derived exclusively through the existing authority policy.
+- Every submitted request must produce a pending Proposal regardless of whether the verdict is `HOLD`, `APPROVE`, or `CHECK`.
+- Treat an `APPROVE` verdict only as advisory text inside a pending Proposal.
+- Do not register an action executor for `flag-payment-request`.
+- Reject malformed CLI input and malformed model output without creating a Proposal.
+- Do not invent evidence identifiers or include unrelated event history in the model prompt.
+- Preserve the existing event, Proposal, provider-registry, and instance-config conventions.
+- Do not add dependencies or modify private instance data.
+
+## Phase 1 - Payment Request Intake and Risk Assessment
+
+<!-- runner:model=codex:gpt-5.4 -->
+<!-- pilot:touches=lib/authority/policy.js -->
+<!-- pilot:touches=lib/roles/riskAssess.js -->
+<!-- pilot:touches=lib/cli.js -->
+<!-- pilot:touches=examples/instance.example.json -->
+<!-- pilot:touches=test/riskAssess.test.js -->
+<!-- runner:read=README.md -->
+<!-- runner:read=lib/roles/communicator.js -->
+<!-- runner:read=lib/proposals/create.js -->
+<!-- runner:read=lib/events/store.js -->
+<!-- runner:verify=npm install && npm run check -->
+
+### Requirements
+
+1. Extend `ACTION_POLICY` in `lib/authority/policy.js` with `flag-payment-request` at `AUTHORITY_LEVELS.FINANCIAL_ACTION`. Increment the policy version consistently with the repository’s versioning convention.
+
+2. Add `lib/roles/riskAssess.js` implementing the `risk.assess` role.
+
+3. Define and export strict assessment parsing, validation, and normalization helpers. The accepted model response must be exactly one JSON object with:
+
+   - `verdict`: one of `HOLD`, `APPROVE`, or `CHECK`.
+   - `reasoning`: a non-empty string.
+   - `riskFactors`: an array of non-empty strings.
+   - `evidenceEventIds`: an array of unique event IDs.
+
+   Reject empty output, invalid JSON, extra unsupported verdict values, missing fields, incorrect field types, blank strings, duplicate evidence IDs, and evidence IDs that were not supplied to the role.
+
+4. Build a bounded role prompt containing:
+
+   - The submitted `payment-request.received` event.
+   - At most the 20 newest relevant prior events.
+   - The exact allowed evidence event IDs.
+   - Instructions that `APPROVE` is only a recommendation and cannot approve or execute anything.
+   - Instructions to use `CHECK` when evidence is insufficient or ambiguous and never invent facts or evidence IDs.
+
+5. Select prior vendor history deterministically from the event store. A relevant event must predate and differ from the request event and match the request’s normalized vendor identifier through either its subject or an explicit vendor identifier in its payload. Do not use arbitrary substring matching over serialized event contents.
+
+6. Resolve the provider from `roles["risk.assess"].provider` through the existing provider registry. Support an injected LLM client for deterministic tests, following existing role conventions. Attribute the Proposal with `{ role: "risk.assess", provider, model }` from the configured and resolved provider rather than model output.
+
+7. After successful validation, create exactly one Proposal through `createProposal` with:
+
+   - Type `flag-payment-request`.
+   - The request event as its causal origin.
+   - The request’s existing correlation ID.
+   - A payload containing the request event ID, normalized request details, normalized assessment, and cited evidence IDs.
+   - Pending status and authority level 3 as derived by existing Proposal and policy code.
+
+8. The role must never append a Decision, invoke `decideProposal`, call `confirmAndExecute`, or register or invoke an action executor.
+
+9. Add a CLI command with this public shape:
+
+   `request submit --instance <name> --vendor-id <id> --vendor-name <name> --amount <number> --currency <code> --description <text> [--due-date <iso>] [--reference <text>]`
+
+10. The command must validate required flags before writing:
+
+    - Vendor ID, vendor name, and description are non-empty.
+    - Amount is finite and greater than zero.
+    - Currency is normalized to uppercase and consists of exactly three ASCII letters.
+    - Optional due date, when present, is a valid ISO timestamp.
+    - Optional reference, when present, is non-empty.
+
+11. For valid input, append one `payment-request.received` event with a generated request ID and correlation ID, `source: "cli"`, a stable payment-request subject, and a normalized payload containing the vendor and request fields. Then run `risk.assess` against that event.
+
+12. Print a concise success result containing the request event ID, verdict, Proposal ID, pending status, and authority level. Return nonzero with a useful error for invalid flags, missing `roles.risk.assess` configuration, provider failure, or invalid model output.
+
+13. Add the command to CLI help and routing without changing the behavior of generic `event add`.
+
+14. Add `risk.assess` to `examples/instance.example.json`, referencing an already declared example provider. Do not add credentials or provider-specific secrets.
+
+15. Add focused tests in `test/riskAssess.test.js` covering:
+
+    - Assessment schema acceptance and normalization for all three verdicts.
+    - Rejection of malformed JSON, invalid verdicts, missing fields, blank risk factors, duplicate citations, and fabricated evidence IDs.
+    - Deterministic vendor-history selection, exclusion of unrelated vendors, exclusion of the request itself, newest-first bounding, and an empty-history case.
+    - The full path from a stored `payment-request.received` Event through an injected role response to one pending `proposal.created` Event.
+    - Preservation of causation and correlation identifiers.
+    - `flag-payment-request` resolving to authority level 3.
+    - An `APPROVE` verdict remaining a pending Proposal with no Decision or Action event.
+    - CLI help and validation for missing fields, invalid amount, invalid currency, and invalid due date.
+    - Provider and model attribution coming from configuration rather than model output.
+
+### Acceptance Criteria
+
+- `request submit` records a normalized payment-request Event and invokes `risk.assess`.
+- A valid role response creates exactly one pending `flag-payment-request` Proposal at authority level 3.
+- `HOLD`, `APPROVE`, and `CHECK` all follow the same pending human-review path.
+- No Decision or Action is created during submission or assessment.
+- The role receives only bounded, vendor-relevant prior history and cannot cite an event it was not given.
+- Invalid request input creates neither a request Event nor a Proposal.
+- Invalid or ungrounded role output creates no Proposal and returns a clear error.
+- No action executor exists for `flag-payment-request`.
+- The example instance configuration includes `risk.assess` without introducing secrets.
+- `npm install && npm run check` passes.
+```
+
+---DRAFT-STATUS---
+status: ok
+reason: The prototype fits in one phase touching five unprotected files and remains within the 20-file/700-line limits.
+tokens used
+44,964
+e3d_provider_usage={"provider":"codex","tokens":44964}

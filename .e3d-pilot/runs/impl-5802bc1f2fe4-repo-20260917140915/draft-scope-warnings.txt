@@ -1,0 +1,1 @@
+Drafted spec has an estimated ~760 changed lines (38 requirement/acceptance bullets x 20 lines/bullet), exceeding max_diff_lines=700; advisory only (the actual post-execution diff ceiling remains enforced)

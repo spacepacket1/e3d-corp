@@ -1,0 +1,480 @@
+## Selected Candidate (candidates.md)
+
+```text
+---
+selected: risk-guard-prototype
+reason: approved idea implementation
+focus: default
+---
+
+# Candidates
+
+## Proposed Candidates
+
+### Candidate risk-guard-prototype: Inbound request risk assessment: minimal HOLD/APPROVE prototype
+Duplicate: no
+Dedup rationale: No existing idea in this repo's ledger addresses inbound risk/request gating -- the four prior ideas (hash anchor workflow, demo/sandbox mode, pipeline velocity indicators, CLI --json/--dry-run flags) are all unrelated tooling and all rejected. This is a genuinely new capability, not an extension of any of them.
+Category: product-strategy
+Analogy: Same shape as e3d-corp's existing opportunity.prospect -> opportunity.communicator -> Proposal path, inverted: instead of scoring outbound opportunities to pursue, this scores inbound requests to gate. Reuses the authority-level/ACTION_POLICY gating and Decision/Outcome separation already built for FINANCIAL_ACTION, rather than inventing new safety machinery.
+Attraction (1-5): -
+Retention (1-5): -
+Effort: medium
+Revenue (1-5|n/a): -
+Description: Prototype the smallest possible slice of a 'Business Decision Guard' inside e3d-corp's existing runtime, reusing its architecture rather than building new machinery: one new Event type representing an inbound consequential request (e.g. a vendor invoice or payment request, added via CLI for this prototype rather than a live Gmail/Drive integration -- that's explicitly out of scope), one new role (risk.assess, parallel in shape to the existing opportunity.prospect role) that reads the request plus whatever evidence the existing evidence-gathering layer can surface (prior correspondence/vendor history if any exists in the event log) and returns a structured risk verdict (HOLD / APPROVE / CHECK) with reasoning, and one new action type (e.g. flag-payment-request) registered in lib/authority/policy.js's ACTION_POLICY at FINANCIAL_ACTION (level 3) authority, so nothing about the request is ever auto-approved -- it always produces a Proposal that requires an explicit human Decision before anything fires, exactly like every other level-3 action in this runtime. Deliverable is: CLI command to submit a request event, the risk.assess role, the Proposal it generates, and a test exercising the full Event to Proposal path (not the Decision/Action execution UI, and not any real external integration). This is a fast prototype to validate the concept, not the full product.
+
+```
+
+## Target Repo Tracked Files (truncated to 300)
+```text
+.codex-spec-runner/manifest.tsv
+.e3d-corp/config.schema.json
+.e3d-pilot/config.json
+.e3d-pilot/events.jsonl
+.e3d-pilot/ideas/idea-6bf468dd7534/idea.json
+.e3d-pilot/ideas/idea-7a05d1256673/idea.json
+.e3d-pilot/ideas/idea-80de83ff2ce7/idea.json
+.e3d-pilot/ideas/idea-e63f2b493715/idea.json
+.e3d-pilot/latest-run
+.e3d-pilot/runs/2026-08-16-e3d-corp/candidates.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-external-context.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-local-state.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-prompt.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/discover-provider.stderr
+.e3d-pilot/runs/2026-08-16-e3d-corp/findings.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/focus
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-facts.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-prompt.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-provider.stderr
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-response.md
+.e3d-pilot/runs/2026-08-16-e3d-corp/ideate-warnings.txt
+.gitignore
+LICENSE
+README.md
+bin/e3d-corp
+docs/build-e3d-corp.md
+docs/build-llm-budget.md
+docs/build-multi-provider-roles.md
+docs/build-portfolio-sheet-source.md
+docs/build-prospect-quality.md
+docs/e3d-corp-e3d-trade-experiment-readiness.md
+docs/e3d-corp-e3d-trade-preflight-findings.md
+docs/e3d-corp-e3d-trade-stack-spec.md
+docs/grok-provider.md
+docs/images/company-runtime.svg
+ecosystem.config.cjs
+examples/instance.example.json
+lib/actions/capitalMandate.js
+lib/actions/log.js
+lib/actions/pilotHandoff.js
+lib/actions/registry.js
+lib/actions/sendOutreach.js
+lib/anchor/anchor.js
+lib/anchor/emailTransport.js
+lib/authority/notify.js
+lib/authority/policy.js
+lib/calendar/googleCalendarApi.js
+lib/calendar/googleServiceAccount.js
+lib/cli.js
+lib/config.js
+lib/decisions/decide.js
+lib/evaluation/metrics.js
+lib/event-sources/e3dApplied.js
+lib/event-sources/googleCalendarBooking.js
+lib/events/chain.js
+lib/events/store.js
+lib/experience/assemble.js
+lib/experience/store.js
+lib/llm/budget.js
+lib/llm/grokCliClient.js
+lib/llm/localClient.js
+lib/llm/openaiCompatibleClient.js
+lib/llm/registry.js
+lib/opportunities/engine.js
+lib/opportunities/investingEngine.js
+lib/opportunities/investingSchema.js
+lib/opportunities/schema.js
+lib/opportunities/scoring.js
+lib/opportunities/store.js
+lib/outcomes/record.js
+lib/outcomes/schema.js
+lib/outcomes/store.js
+lib/outcomes/tradeReturn.js
+lib/outreach/sesTransport.js
+lib/pilot/checkShipped.js
+lib/pilot/handoffArtifact.js
+lib/proposals/capitalMandate.js
+lib/proposals/capitalMandateSchema.js
+lib/proposals/create.js
+lib/proposals/pilotHandoff.js
+lib/proposals/schema.js
+lib/proposals/store.js
+lib/research/adapter.js
+lib/research/knowledgeBaseMcp.js
+lib/research/mcpTransport.js
+lib/research/webSearch.js
+lib/roles/communicator.js
+lib/roles/investingOpportunity.js
+lib/roles/opportunityProspect.js
+lib/store/appendOnlyLog.js
+lib/trade/client.js
+lib/web/auth.js
+lib/web/csrf.js
+lib/web/render.js
+lib/web/server.js
+ops/reports/dailyDigest.js
+ops/reports/pollCalendarBookings.js
+ops/run/run-anchor-publish.sh
+ops/run/run-calendar-poll.sh
+ops/run/run-daily-digest.sh
+ops/run/run-futco-web.sh
+package-lock.json
+package.json
+test/capitalMandateAction.test.js
+test/capitalMandateProposal.test.js
+test/e3dTradeAcceptance.test.js
+test/experimentReadinessReport.test.js
+test/investingOpportunityRole.test.js
+test/phase1.test.js
+test/phase10.test.js
+test/phase2.test.js
+test/phase3.test.js
+test/phase4.test.js
+test/phase5.test.js
+test/phase6.test.js
+test/phase7.test.js
+test/phase8.test.js
+test/phase9.test.js
+test/tradeOutcomeWebhook.test.js
+```
+
+## Repo Docs
+### README.md
+```text
+# e3d-corp
+
+Public repo: [github.com/spacepacket1/e3d-corp](https://github.com/spacepacket1/e3d-corp)
+
+**e3d-corp decides what a company should do next: it gathers real evidence, turns it into scored opportunities, drafts proposals for the ones worth acting on, and refuses to touch the outside world until a human explicitly approves.**
+
+![e3d-corp's company runtime loop: event, opportunity and proposal run autonomously at authority levels 0-1, a gold human authority gate holds decision, and action, outcome and experience fire only after explicit approval, with experience feeding back into the next cycle](docs/images/company-runtime.svg)
+
+It is a company-agnostic, event-sourced runtime built on seven durable primitives — **Event → Opportunity → Proposal → Decision → Action → Outcome → Experience**. Models are replaceable reasoning components inside that runtime, not employees with job titles: a role receives explicit inputs, returns structured JSON matching a schema, and deterministic code does everything else. Every state transition is an append-only event carrying `causationId` and `correlationId`, so any conclusion the system reaches can be replayed from the originating signal to the measured outcome.
+
+## Why we built this
+
+Most "AI company" projects start from the org chart: give a model a name badge, let it move records around, and call the resulting activity progress. That produces motion, not decisions — and the moment one of those agents can actually send an email or move money, the interesting question stops being "can it imitate an employee?" and becomes "what happens when it's wrong?"
+
+The scarce resource at a small company is rarely bookkeeping capacity. It's *noticing* — spotting the consulting engagement, the partnership, the competitor move, the piece of internal work that would pay for itself, and doing it early enough to matter. That work is genuinely hard to automate honestly, because it depends entirely on real evidence: a recommendation grounded in a fabricated capability claim is worse than no recommendation at all.
+
+So e3d-corp is built the other way around. Research and scoring run continuously and autonomously, because reading the world is safe. Everything with a consequence — sending outreach, handing work to another system, touching money, closing a deal — stops at a gate that only a human can open, enforced inside the action functions themselves rather than as a courtesy check in the UI. The system's job is to bring you a short, well-evidenced list and the context to judge it. Deciding remains yours.
+
+## What it does differently
+
+- **Never lets a model mutate company state.** Roles return structured JSON validated against an explicit schema. Deterministic code applies policy, owns every state transition, and controls every side effect. A malformed or over-reaching model response fails validation; it does not become a decision.
+- **Never trusts a caller's claim about how much authority an action needs.** `authorityLevel` is derived from a versioned policy table by action type (`lib/authority/policy.js`), never accepted as input, so a role can't under-declare the authority its own proposal requires.
+- **Never fires a consequential action without a logged human Decision.** `assertProposalAuthorized` runs as the first line of every action executor and fails closed on an unknown type, a type/level mismatch, or a proposal that isn't `approved`. No config flag or environment variable bypasses it.
+- **Never implements a decision twice.** The CLI and the web UI call the same library functions for every transition. A Decision records `via: "cli" | "web"` for traceability — that is the *only* difference between the two surfaces.
+- **Never confuses approval with success.** A Decision (a human said yes) and an Outcome (the world responded) are separate records captured at separate times. Evaluation metrics keep them apart, so "approved" never quietly counts as "worked."
+- **Never invents evidence.** Every claim traces back to an `evidence.gathered` event holding the actual query and the actual result, from the company's own knowledge base (via MCP) or a web-search adapter. Degraded providers are recorded as degraded rather than silently skipped.
+- **Never lets history be edited quietly.** Every record in the event log carries a `prevHash` linking it to its predecessor and a `hash` over its own content, so altering any past record invalidates everything written after it. `event verify` walks the chain and names the first bad record.
+- **Never commits real business data.** Instance data — prospects, findings, decisions, revenue — lives in a gitignored directory outside the tracked tree. The repo ships a placeholder example config and nothing else.
+
+## The runtime loop
+
+```mermaid
+flowchart LR
+    S["signal / lead / scheduled pass"] --> E[["event store"]]
+    E --> P["opportunity.prospect"]
+    P -->|structured JSON| V{"schema valid?"}
+    V -->|no| DROP((discarded))
+    V -->|yes| O["opportunity: scored"]
+    O -->|human decides| NV((no-value))
+    O -->|human decides| PUR["pursuing"]
+    PUR --> C["opportunity.communicator"]
+    C --> PR[["proposal: pending"]]
+    PR -->|reject| REJ((rejected))
+    PR -->|approve, level 2| A["action fires"]
+    PR -->|approve, level 3-4| CONF["awaiting confirmation"]
+    CONF -->|explicit second step| A
+    A --> OUT[["outcome recorded"]]
+    OUT --> X[["experience"]]
+    X --> E
+```
+
+1. **Event** — every signal lands in an append-only `events.jsonl`: a scheduled research pass, an inbound lead, a calendar booking, or a hand-added event. This file is the single source of truth; Opportunities and Proposals are folded from it, never stored separately.
+2. **Research** — the evidence layer queries the company knowledge base over MCP and a pluggable web-search provider, appending an `evidence.gathered` event per call with the real query and result attached.
+3. **Opportunity** — the `opportunity.prospect` role reads the trigger and its evidence and returns candidate opportunities as structured JSON. Anything failing `validateOpportunityCandidate` is rejected outright rather than guess-parsed.
+4. **Scoring** — deterministic, not a second model call. Role confidence, evidence count, and trigger recency combine under configurable weights and a per-type multiplier into one sortable `score.value`.
+5. **Decision (what to pursue)** — a human moves an opportunity to `reviewed`, `pursuing`, or `no-value`. The underlying write is only authority level 1, but this is always an explicit human call: it's a product choice about where judgment belongs, not a safety requirement.
+6. **Proposal** — for `pursuing` opportunities, `opportunity.communicator` drafts a concrete action as a Proposal with a payload and a `proposedBy: { role, provider, model }` attribution. Drafting is autonomous; the proposal sits `pending`.
+7. **Decision (approve/reject) and Action** — approving a level-2 proposal fires its action in the same call, because the action is reversible and adding friction to reversible things is just friction. Level 3 and 4 approve *only*; execution needs a separate, explicit confirmation step.
+8. **Outcome → Experience** — real-world results are recorded as their own events. Once a chain reaches a Decision or an Outcome it is assembled into an Experience record, which is what the evaluation layer measures. Role and model attribution come only from what the log actually recorded — never reconstructed by guesswork.
+
+## Authority levels
+
+Levels are defined once, in full, so adding a higher-consequence action later can't force a breaking schema change. Only the levels that are actually needed are exercised.
+
+| Level | Meaning | Requires a human Decision? | Examples |
+|:-----:|---------|---------------------------|----------|
+| **0** | Observe — read-only research and ingestion | No, fully autonomous | web search, knowledge-base queries, ingesting a lead |
+| **1** | Internal / reversible write | No, fully autonomous | create or score an Opportunity, draft a Proposal, add a note |
+| **2** | External / reversible action | **Yes** — approval and execution are one call | `send-outreach`, `pilot-handoff` |
+| **3** | Financial / contractual action | **Yes** — approval, then a separate confirmation | `issue-invoice` |
+| **4** | Irreversible / high-value action | **Yes** — approval, then a separate confirmation | `mark-deal-closed` |
+
+Levels 0–1 never produce a Proposal at all. Levels 2–4 always do, and the mapping from action type to required level lives in one versioned table. An action type with no policy entry is refused rather than treated as autonomous — the failure mode is "nothing happens," never "it happened unsupervised."
+
+Today `send-outreach` and `pilot-handoff` have registered executors. `issue-invoice` and `mark-deal-closed` have policy entries but no executor yet: the guard exists ahead of the capability, deliberately.
+
+## An Opportunity is not a sales lead
+
+That's the most common thing to get wrong about this system. An Opportunity is any evidence-backed action the company should consider, including:
+
+`consulting-engagement` · `product-opportunity` · `feature-signal` · `partnership` · `distribution` · `technology-to-investigate` · `market-trend` · `competitor-development` · `event-to-attend` · `integration-opportunity` · `operational-improvement` · `cost-saving` · `other`
+
+The list is illustrative, not an enum — `type` is an open string, and instance config can weight any type up or down. A repeated customer request that implies a missing feature, a competitor's launch, a conference worth attending, and a cost-saving change to internal tooling are all first-class opportunities that flow through exactly the same pipeline as a prospective client.
+
+Statuses: `candidate` → `scored` → `reviewed` → `pursuing` → `won` / `lost`, with `no-value` available at any point.
+
+## Requirements and installation
+
+Node.js 18+ is the only runtime requirement. The single production dependency is the AWS SES client, used by the outreach transport.
+
+```bash
+git clone https://github.com/spacepacket1/e3d-corp.git
+cd e3d-corp
+npm install
+node bin/e3d-corp --help
+```
+
+You also need an OpenAI-compatible LLM endpoint. Any will do; the reference deployment points at a local Qwen2.5 served over MLX, so no company data leaves the machine.
+
+## Configure an instance
+
+One JSON file is the entire contract between e3d-corp and a company. Start from [`examples/instance.example.json`](examples/instance.example.json).
+
+| Field | Required | Purpose |
+|-------|:--------:|---------|
+| `name` | ✓ | Instance name; selects the config under `.e3d-corp/instance/<name>/` |
+| `dataDir` | ✓ | Private, gitignored directory holding this instance's real data |
+| `llm` | ✓ | `{ baseUrlEnvVar, modelEnvVar }` — *names* of env vars, never values |
+| `research` | ✓ | `{ knowledgeBaseMcpUrl, webSearchProvider, webSearchApiKeyEnvVar }` |
+| `eventSources` | ✓ | Declared inbound signal sources |
+| `roles` | ✓ | Role name → `{ provider, model }`; models are assigned, not hard-coded |
+| `researchTopics` | | Topics the scheduled discovery pass sweeps |
+| `scoring` | | `weights` and per-type `typeWeights` |
+| `outreach` | | `{ provider, region, fromEmail, fallbackToEmail }` for SES |
+| `web` | | `{ authUserEnvVar, authPassEnvVar, port }` |
+| `leadWebhook` | | `{ tokenEnvVar }` — bearer token for the inbound lead endpoint |
+| `anchor` | | `{ provider, toEmailEnvVar }` — where to publish the chain head |
+| `calendar` | | `{ provider, calendarId, organizerEmail, serviceAccountKeyFileEnvVar }` |
+| `authorityNotify` | | `{ email, command }` — best-effort ping when level-2+ approvals are pending |
+
+Validate it:
+
+```bash
+node bin/e3d-corp config validate examples/instance.example.json
+```
+
+### Secrets are never in the config
+
+Config holds the **name** of an environment variable, never its value. `llm.baseUrlEnvVar`, `web.authPassEnvVar`, `leadWebhook.tokenEnvVar`, and `calendar.serviceAccountKeyFileEnvVar` are all indirections. Actual credentials live in an env file inside the gitignored instance directory and are sourced at launch. This is what makes it safe for the config contract to be a tracked, reviewable artifact.
+
+## Operator workflow
+
+Discover — the scheduled pass that sweeps `researchTopics`, gathers evidence, and produces scored opportunities:
+
+```bash
+node bin/e3d-corp run --instance <name>
+```
+
+Review what it found, then decide. Nothing advances past `scored` on its own:
+
+```bash
+node bin/e3d-corp opportunities list --instance <name> --min-score 0.6
+node bin/e3d-corp opportunities show <id>
+node bin/e3d-corp opportunities decide <id> --status pursuing --reason "Worth a first email"
+```
+
+Draft actions for everything now marked `pursuing` (skips opportunities that already have one):
+
+```bash
+node bin/e3d-corp pursue --instance <name>
+```
+
+Review and decide on the resulting proposals. Approving a level-2 proposal sends the outreach in that same call:
+
+```bash
+node bin/e3d-corp proposals list --status pending
+node bin/e3d-corp proposals show <id>
+node bin/e3d-corp proposals approve <id> --reason "Good fit, send it"
+node bin/e3d-corp proposals reject  <id> --reason "Wrong segment"
+```
+
+A level-3 or level-4 proposal is only *approved* by that call — its action does not fire. The separate confirmation is its own command, which takes no `--reason`, because the deliberation already happened at approval and this step is just "yes, actually do it now":
+
+```bash
+node bin/e3d-corp proposals confirm <id>
+```
+
+Record what actually happened, then read the assembled chain:
+
+```bash
+node bin/e3d-corp outcomes record --correlation <id> --type meeting.booked --payload '{"note":"30m intro call"}'
+node bin/e3d-corp experience show <correlationId>
+node bin/e3d-corp event log --correlation <correlationId>
+node bin/e3d-corp evaluate report --since 2026-01-01
+node bin/e3d-corp event verify
+```
+
+Outcome types: `prospect.replied`, `meeting.booked`, `proposal.accepted`, `outcome.proposal.rejected`, `deal.won`, `deal.lost`, `invoice.paid`, `capability.shipped`, `customer.adopted`, `opportunity.no-value`.
+
+> Both surfaces reach the same second step: `proposals confirm` on the CLI and `POST /proposals/:id/confirm` in the web UI are thin calls into one `confirmAndExecute`. Every refusal — not approved, wrong authority level, no registered executor — is enforced there, not re-checked per surface.
+
+## Web UI
+
+The web UI is the primary human interface, built early rather than bolted on, because reviewing and approving is the real ongoing work this system creates.
+
+```bash
+node bin/e3d-corp web --instance <name> --port 3010
+```
+
+It is a hand-rolled Node HTTP server — no framework, no build step, no SPA toolchain. Basic auth is mandatory and the server refuses to start without credentials; there is no unauthenticated mode, because there is no demo data that would be safe to serve unauthenticated. Mutating routes are POST-only with same-site-cookie CSRF protection.
+
+| Route | Purpose |
+|-------|---------|
+| `/opportunities` | Ranked list, filterable by status and score |
+| `/opportunities/:id` | Detail, evidence chain, and the decide form |
+| `/proposals` | Pending and decided proposals |
+| `/proposals/:id` | Detail, with approve / reject / confirm |
+| `/actions` | Every action that actually fired |
+| `/outcomes` | Recorded real-world outcomes |
+| `/metrics` | The evaluation report |
+
+## Event sources
+
+Three inbound paths exist today, all converging on the same engine:
+
+- **Scheduled discovery** — `e3d-corp run` sweeps `researchTopics` on whatever cadence you schedule. e3d-corp does not ship a scheduler; use cron or PM2.
+- **Lead webhook** — `POST /webhooks/e3d-applied-lead` accepts a lead-capture submission authenticated by a bearer token compared in constant time. It sits *before* the basic-auth gate, since it is machine-to-machine. It records the lead, responds immediately, then runs the opportunity engine out of band so the caller isn't held open for an LLM round trip.
+- **Google Calendar bookings** — for contact forms whose call-to-action is an appointment-schedule booking rather than a form post. A poller authenticates as a service account using a hand-rolled RFC 7523 JWT bearer flow (no `googleapis` dependency), lists upcoming events, and records unseen ones as leads. Deduplication queries the event store for already-recorded Google event IDs rather than keeping a separate state file — `events.jsonl` stays the only source of truth.
+
+Adding a source means writing something that appends a well-formed event and calls `runOpportunityEngine`. The engine itself has no idea where its trigger came from.
+
+## Tamper evidence
+
+`events.jsonl` was append-only by convention — nothing structurally stopped a past record from being edited in place, which is precisely the property an audit trail is supposed to have. Every record now carries:
+
+```
+prevHash  — the hash of the record before it (null for the first, a seal for a pre-chaining prefix)
+hash      — sha256 over this record's canonical form, prevHash included
+```
+
+Because each hash covers the previous link, every record commits to the entire history behind it. Editing one record, or deleting one from the middle, invalidates every record after it:
+
+```bash
+node bin/e3d-corp event verify
+# Event chain intact: 412 of 412 records verified
+# Event chain BROKEN at record 137: record 137 (id 8a3c…) hashes to …, but carries … — this record's own content was altered
+```
+
+Adoption needed no rewriting of existing history: the first chained record's `prevHash` is a **seal** over the unchained prefix, so records written before this existed are still covered from that point forward. On a real instance's event log at the point chaining was adopted, altering any record from before that point still breaks verification at the same record it always would have.
+
+Hash chaining also makes every append a read-modify-write, so appends now take an exclusive lock. Without it, the 07:00 discovery pass and the :00 calendar poll — which genuinely overlap — could both claim the same `prevHash` and fork the chain.
+
+The primitives live in [`lib/store/appendOnlyLog.js`](lib/store/appendOnlyLog.js) rather than inside the event store, so Phase 11's `ledger.jsonl` inherits the same chain instead of inventing a second one.
+
+### External anchors
+
+The chain catches partial edits. It cannot catch the two failures where someone with write access rewrites the file wholesale: recomputing every hash after an edit yields a chain that verifies cleanly, and truncating the tail leaves a valid prefix. Both are only detectable against a record of what the log looked like earlier, held somewhere the process cannot reach back into.
+
+An **anchor** is that record — the chain head plus the record count at a moment in time, published outward:
+
+```bash
+node bin/e3d-corp anchor publish
+# Anchored 412 records at 4815668f39d63b99… → ops@yourcompany.example
+```
+
+Two numbers and a hash. No titles, names, amounts, or evidence — nothing that could identify a client or a deal ever rides along, which is what makes anchoring compatible with the rule that real business data never leaves the instance directory.
+
+The count is what makes truncation detectable and the head is what makes rewriting detectable. `event verify` checks both, and the anchor event's own `prevHash` *is* the anchored head by construction, so the anchor and the chain corroborate each other or neither is worth trusting.
+
+**An anchor stored in the log cannot catch truncation, and structurally never will.** An anchor at index *i* covers the *i* records before it, so any log still containing it is necessarily longer than the count it asserts — cutting the tail cuts the anchors along with it. Only the copy that left the machine survives that. So the emailed anchor is the one to verify against:
+
+```bash
+node bin/e3d-corp event verify --head 4815668f39d63b99… --count 412
+# Emailed anchor verified: the first 412 of 511 records are unchanged since it was published
+```
+
+Every anchor email carries that exact command with its own values filled in, and says to run it from the message rather than from the anchors in the log. There's a test asserting the in-log check genuinely cannot see a truncation, so the limit stays visible rather than being quietly assumed away.
+
+The transport is injected rather than hard-coded, matching how the research and outreach layers take their providers — so S3 Object Lock, a signed commit, a timestamping service, or a public chain is a new `send()` and nothing else. The reference deployment publishes daily by email, after the digest.
+
+**What none of this does:** it does not make recorded facts *true*. Integrity of the record is not accuracy of the record.
+
+## Scoring
+
+Scoring is deliberately deterministic — asking a model to score its own output is how you get confident nonsense:
+
+```
+score.value = ( w_confidence · confidence
+              + w_evidence   · min(evidenceCount / 5, 1)
+              + w_recency    · recencyFactor(triggerOccurredAt) )
+              × typeMultiplier
+```
+
+`recencyFactor` decays linearly from 1.0 to 0.0 over 30 days, so a fresh signal outranks a stale one all else equal. `typeMultiplier` comes from `scoring.typeWeights[type]` and defaults to 1, which lets an instance emphasize whole categories — say, weighting consulting engagements above market trends — without touching the scoring code.
+
+## Handoff to e3d-pilot
+
+An opportunity whose answer is "we should build this" doesn't stay a document. `opportunities propose-handoff` produces a level-2 proposal that, on approval, writes a handoff artifact matching [e3d-pilot](https://github.com/spacepacket1/e3d-pilot)'s actual config contract — verified against its real input shape, not an assumed one. e3d-pilot takes it from idea to a draft PR under its own two approval gates.
+
+The loop closes with `opportunities check-shipped`, which re-queries the knowledge base for evidence that the capability now exists and records a `capability.shipped` outcome when it does. Neither repo imports the other; the contract is a file.
+
+## Evaluation
+
+`evaluate report` computes, over real events only:
+
+- opportunities discovered, broken down by type
+- opportunity acceptance rate (`pursuing` vs `no-value`) and proposal rejection rate
+- the outreach funnel — sent → replied → meetings booked → deals won
+- revenue attributable to chains that started here
+- cost per useful opportunity, where "useful" means the chain reached a genuinely positive outcome
+- latency and cost by role and model
+
+Counts come from the event store; per-chain economics come from assembled Experience records, since only a completed chain has a meaningful cost. Anything with no data reports `n/a` rather than a fabricated zero.
+
+## Deployment
+
+Node plus a scheduler is the whole story. The reference deployment runs the web UI under PM2 and drives everything else from cron: a nightly discovery pass, a morning HTML digest over SES, a daily anchor publish, and a booking poll every 15 minutes. Wrapper scripts under `ops/run/` source the instance env file before exec'ing the relevant entry point, keeping secrets out of crontab.
+
+There is no message queue, no external database, and no distributed event bus. At a small company's scale the thing that matters is a semantic contract and a replayable audit trail, not infrastructure.
+
+## What never gets committed
+
+`.e3d-corp/instance/` is gitignored in its entirety. No real client names, deal amounts, revenue figures, research findings about real prospects, credentials, or service-account keys enter this repository's history — ever. The tracked tree carries code, a placeholder example config, and this document.
+
+## Testing
+
+```bash
+npm test          # node --test
+npm run check     # syntax check + full suite
+```
+
+Ten suites — one per implemented phase, 94 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+
+## Status
+
+Phases 1–10 are implemented: runtime foundation, event store, research layer, opportunity engine, authority and decision framework, web UI, pursuit and outreach, the e3d-pilot handoff, outcome and experience capture, and evaluation.
+
+Phase 11 — CRM, ledger, and a bookkeeper role — is specified but deliberately unbuilt. It waits until the pursuit phases produce enough real deal volume to justify it. Model fine-tuning, multi-model negotiation for high-authority decisions, and any mechanism for adding roles are all gated on evidence from the evaluation layer that they would improve real outcomes. None of them ship early merely because they're possible.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+```
+
+## Configured Verification Commands
+
+- `npm install && npm run check`
