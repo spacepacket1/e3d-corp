@@ -25,4 +25,4 @@
 2026-08-27T20:02:19-0700	docs/e3d-corp-e3d-trade-stack-spec.md	6	`e3d-trade` Outcome-Return Path	codex	gpt-5.4	exec	0	0
 2026-08-27T20:11:15-0700	docs/e3d-corp-e3d-trade-stack-spec.md	7	Acceptance Tests	codex	gpt-5.5	exec	0	0
 2026-08-27T20:14:07-0700	docs/e3d-corp-e3d-trade-stack-spec.md	8	Governed vs. Ungoverned Experiment Readiness Report	codex	gpt-5.4	exec	0	0
-2026-09-18T05:45:52-0700	/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260917140915.S6c7JJ/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260917140915/spec-final.md	1	Payment Request Intake and Risk Assessment	codex	gpt-5.4	exec	0	1
+2026-09-18T06:06:51-0700	/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260917140915.ukQym3/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260917140915/spec-final.md	1	Vendor history selection and assessment validation (pure helpers)	codex	gpt-5.4	exec	0	1

@@ -1,0 +1,385 @@
+ok: spec file exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260918062109/spec-final.md
+ok: root directory exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM
+ok: --from phase is numeric: 1
+ok: --to phase is numeric: 3
+ok: selected 3 phase(s) for target all
+ok: verification shell found on PATH: bash
+ok: Codex binary found on PATH: codex
+result: ok
+== Phase 1: Vendor history selection and assessment validation (pure helpers) ==
+Provider: codex
+Model: gpt-5.4
+Status: starting Codex phase run.
+**Phase 1** is implemented and kept scoped to the pure-helper work.
+
+I updated the authority policy to version `3` and added `flag-payment-request` at authority level `3`. I added `lib/roles/riskAssess.js` with only the Phase 1 helpers: vendor ID normalization, vendor-history selection, fenced JSON parsing, and strict assessment normalization/validation. I also updated the stale `v2` assertion in `test/phase5.test.js` and added focused coverage in `test/riskAssess.test.js`.
+
+**Status:** Phase 1 helper behavior is working and the focused tests pass.
+
+**Verification:** I ran `node --test test/riskAssess.test.js`, `node --test test/phase5.test.js`, `npm install`, and `npm run check`. The Phase 1 tests passed. The full repo check still fails in this workspace for unrelated pre-existing issues outside this phase, mainly missing external `e3d-trade` files and broken AWS SES dependency resolution (`@aws-sdk/client-ses` / `@smithy/core/retry`) in other suites.
+
+I also wrote the required handoff to [.codex-spec-runner/summaries/phase-1.md](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.codex-spec-runner/summaries/phase-1.md).
+Provider tokens: 67180 (ceiling: 120000)
+Verification: running npm install && npm run check
+
+up to date, audited 25 packages in 287ms
+
+found 0 vulnerabilities
+
+> e3d-corp@0.1.0 check
+> node --check bin/e3d-corp && node --test
+
+✔ capital_mandate action refuses an unapproved proposal before contacting e3d-trade (5.87225ms)
+✔ confirming an approved capital_mandate submits active payload and records activation only after accepted ack (3.174708ms)
+✔ unconfirmed e3d-trade acknowledgement leaves mandate approved, not active (1.799958ms)
+✔ duplicate confirm of the same mandate is idempotent in e3d-corp and does not resubmit (2.517709ms)
+✔ trade client retries timeout/5xx safely and surfaces conflicts without retrying (314.976167ms)
+✔ capital_mandate schema validates the full lifecycle field set and deterministic mandate id (4.171458ms)
+✔ capital_mandate lifecycle accepts only the declared forward path (0.423667ms)
+✔ capital_mandate constraints reject relaxation, override, bypass, and live-execution signals (0.625458ms)
+✔ capital_mandate proposal uses the existing human-gated Proposal and Decision pipeline (3.083375ms)
+✔ createProposal rejects malformed capital_mandate payloads without a partial write (0.5725ms)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-trade/scripts/capitalMandates.js' imported from /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/e3dTradeAcceptance.test.js
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+    at moduleResolve (node:internal/modules/esm/resolve:879:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:708:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:728:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:766:56)
+    at #resolve (node:internal/modules/esm/loader:690:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:610:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:277:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:389:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-trade/scripts/capitalMandates.js'
+}
+
+Node.js v26.7.0
+✖ test/e3dTradeAcceptance.test.js (43.296958ms)
+✔ Phase 8 readiness report exists and covers the required readiness conclusions (2.083875ms)
+✔ buildPrompt separates E3D theses, stories, and market state for the investing role (0.938916ms)
+✔ runInvestingOpportunityScorer returns a normalized investment candidate and provider telemetry without mutating opportunity state (4.124958ms)
+✔ invented thesis or story references are rejected and recorded as a provider failure (1.556583ms)
+✔ parseCandidateJson and investing schema reject malformed or incomplete role output (0.139583ms)
+✔ validateInstanceConfig accepts the example config (1.178292ms)
+✔ cli config validate passes for the example config (108.800417ms)
+✔ cli config validate fails clearly for a missing file (93.777958ms)
+✖ cli config validate accepts the futco instance config (81.292ms)
+✔ help output documents provider status and later-phase commands (77.1415ms)
+✔ legacy flat llm config fails validation with an explicit llm.providers migration error (0.28ms)
+✔ unknown role provider fails validation with a role-specific error (0.10875ms)
+✔ providers status reports missing Grok binary and missing hosted API key without making a call (72.996416ms)
+✔ resolveProvider returns grok-cli-default when no model env var is configured (0.62475ms)
+✔ resolveProvider names the missing env var for hosted providers (0.159417ms)
+✔ local HTTP provider aborts on timeout instead of hanging (52.761ms)
+✔ local HTTP provider returns text plus normalized usage (0.320125ms)
+✔ grok CLI provider kills the subprocess on timeout (53.792ms)
+✔ grok CLI provider parses JSON output into text, usage, and cost (216.183459ms)
+✔ grok CLI provider treats malformed JSON output as a call failure (133.1505ms)
+✖ futco instance directory placeholder exists (0.427084ms)
+✖ example and futco configs use the provider registry shape (0.15975ms)
+✔ computeMetrics against a fixture with a known mix of outcomes matches hand-computed expected values for every metric (15.016291ms)
+✔ computeMetrics --since filters out opportunities/events before the cutoff (8.032209ms)
+✔ formatMetricsReport renders human-readable rates and honestly reports "no data" rather than a fabricated 0%/number (0.488916ms)
+✔ CLI: evaluate report renders the same fixture metrics as computeMetrics (127.487583ms)
+✔ web /metrics renders the same fixture metrics as computeMetrics (9.655292ms)
+✔ computeMetrics includes the same budget status objects computeBudgetStatus returns directly (8.633792ms)
+✖ Phase 10 real-data bar: evaluate report against real (even sparse) FutCo data produces a real, non-fabricated report (0.210166ms)
+✔ appendEvent generates id/occurredAt when absent and persists the record (6.289708ms)
+✔ appendEvent rejects an event missing required fields (0.492125ms)
+✔ appendEvent rejects a causationId that does not resolve to an existing event (0.349916ms)
+✔ appendEvent accepts a causationId pointing at a real prior event (0.753083ms)
+✔ queryEvents filters by type, correlationId, and since (0.806042ms)
+✔ validateInstanceConfig accepts llm.budget and rejects unsupported period or unknown budget providers (0.397416ms)
+✔ computeBudgetStatus reports settled spend, outstanding reservations, non-negative remaining, and UTC day boundaries (2.825ms)
+✔ reserveBudget is lock-safe under concurrency and unlimited providers always grant (18.916417ms)
+✔ settleReservation records the settled provider event and budget status reflects the settled tokens (2.668916ms)
+✔ CLI: budget status renders computeBudgetStatus numbers for configured providers (106.306792ms)
+✔ reconstructChain returns a hand-crafted 4-event chain in correct causal order (2.374375ms)
+✔ reconstructChain orders events by occurredAt regardless of append order (0.607792ms)
+✔ event add generates a fresh correlationId; a second add with --correlation links to the same chain (233.7255ms)
+✔ event add rejects invalid --payload JSON with a clear error (72.072125ms)
+✔ event add surfaces a causationId validation error through the CLI (71.335459ms)
+✔ concurrent event add invocations do not corrupt events.jsonl (194.353833ms)
+✔ appendEvent links each record to the one before it, and the chain verifies (0.895709ms)
+✔ verifyEventChain names the first altered record, and reports what a chain alone cannot catch (1.139917ms)
+✔ adopting chaining on an existing unchained log seals the legacy prefix rather than rewriting it (0.814875ms)
+✔ publishAnchor records the head and count, and the anchor event agrees with the chain (0.959542ms)
+✔ an anchor catches a full rewrite and a truncated tail — the two failures the chain alone cannot see (1.128167ms)
+✔ only an externally held anchor catches truncation — in-log anchors structurally cannot (0.920916ms)
+✔ anchor email config fails closed, and the body carries no business content (0.199291ms)
+✔ CLI: event verify reports an intact chain and exits non-zero on a broken one (274.769208ms)
+✖ futco instance config declares the e3d-applied lead-capture source (0.403ms)
+✖ research adapter returns real knowledge-base results and appends evidence (22.867208ms)
+✖ research adapter parses repo info and records evidence for the repo lookup (2.285708ms)
+✔ web search uses the configured provider and appends evidence (4.196875ms)
+✔ web search includes the configured API key from the referenced env var (3.529833ms)
+✔ research adapter returns documented unavailable results when providers are unreachable (3.0295ms)
+✔ recordLeadReceived creates lead.received with a fresh correlationId (1.470541ms)
+✔ runOpportunityEngine produces a correctly-typed opportunity and a traceable event chain from a stubbed LLM (6.557958ms)
+✔ malformed role output (invalid JSON) is rejected and appends no opportunity.created event (1.523584ms)
+✔ malformed role output (missing required fields) is rejected and appends no opportunity.created event (1.192584ms)
+✔ parseCandidateJson strips a markdown fence but still rejects genuinely broken JSON (0.134583ms)
+✔ buildPrompt excludes own-domain evidence results before truncation and leaves non-URL items untouched (0.276708ms)
+✔ buildPrompt leaves evidence unchanged when ownDomains is omitted or empty and the prompt requires counterparty honesty (0.171583ms)
+✔ normalizeOpportunityCandidate enforces counterparty rules and preserves it on valid candidates (0.11325ms)
+✔ runOpportunityEngine stores counterparty and derives pursuable deterministically (3.132084ms)
+✔ listOpportunities sorts pursuable first and treats a missing pursuable field as false (2.483333ms)
+✔ boss-only prospect run produces one Opportunity, one completion, and never touches the second provider (1.121917ms)
+✔ boss-requested second opinion uses only the next provider, settles the reservation, and creates two Opportunities (3.198125ms)
+✔ budget exhaustion skips the elective second opinion and records role.provider.skipped (1.7835ms)
+✔ boss failure falls back to the next provider without any budget reservation (1.643541ms)
+✔ fallback continues through the full provider list until one provider succeeds (2.01775ms)
+✔ a boss request for a second opinion reaches at most the next provider in the list (6.687375ms)
+✔ scoreOpportunity is a deterministic, documented combination of confidence/evidence/recency/type weight (0.110042ms)
+✔ runDiscoveryPass processes each research topic independently and tolerates a per-topic failure (3.001ms)
+✔ opportunity engine grounds candidates in real knowledge-base evidence with correct causation/correlation (21.99925ms)
+✔ opportunities list and show CLI commands render pursuable-first rows, filters, counterparty data, and missing-field fallback (419.474625ms)
+✔ opportunities show reports a clear error for an unknown id (71.329333ms)
+✔ instance config validation accepts researchTopics/scoring and rejects malformed values (0.233084ms)
+✖ futco instance config declares the opportunity.prospect role and real research topics (0.131208ms)
+Proposal ebb398da-9455-44cd-be62-2d0b34f3e531 must be approved before confirmAndExecute (status: pending)
+Proposal ebb398da-9455-44cd-be62-2d0b34f3e531: approved
+Proposal ebb398da-9455-44cd-be62-2d0b34f3e531: confirmed, action executed
+Proposal d73ce2a7-e5b4-4547-bfa7-dd66ac082ab6: approved (action executed immediately)
+Proposal d73ce2a7-e5b4-4547-bfa7-dd66ac082ab6 is authority level 2; level-2 actions already execute on approval and do not use confirmAndExecute
+✔ authority policy: known action types map to documented levels; unknown types fail closed (0.656917ms)
+✔ assertProposalAuthorized refuses a pending proposal and passes an approved one at the matching type/level (2.746042ms)
+✔ createProposal derives authorityLevel from the policy table and rejects malformed input without a partial write (0.962ms)
+✔ decideOpportunity requires a reason, rejects unknown decisions, and appends opportunity.reviewed with via recorded (1.425667ms)
+✔ level-2 proposal: approval and execution are the same call; a pending proposal refuses the action directly (2.050291ms)
+✔ level-3/4 proposals require the separate confirmAndExecute step and do not fire on approval alone (5.479292ms)
+✔ rejecting a proposal never executes its action, at any level (1.178791ms)
+✔ full causal chain from originating event through opportunity.reviewed and proposal.created -> proposal.approved is reconstructable via correlationId, with via recorded (1.77775ms)
+✔ authorityNotify is best-effort: absent config, and a failing command, never throw or block proposal creation (1.89375ms)
+✔ CLI: a hand-crafted proposal at each authority level can be approved or rejected via the CLI wrapper (428.132458ms)
+✔ CLI: opportunities decide transitions status and requires --status and --reason (215.527334ms)
+✔ CLI: `proposals confirm` is the level-3/4 second step, and refuses what confirmAndExecute refuses (143.647708ms)
+✔ web server refuses to start with no auth env vars configured, naming the missing credential (3.5395ms)
+✔ startWebServer throws the same way, before ever listening, when credentials are missing (0.326208ms)
+✔ GET /opportunities/:id renders a causal chain identical in content to `opportunities show` (127.898417ms)
+✔ GET /opportunities and /opportunities/:id render pursuable state and counterparty details for current and historical records (4.378916ms)
+✔ approving a level-2 proposal via the web form fires the action exactly once and records via: "web" (4.073375ms)
+✔ single-step approve on a level-3/4 proposal via the web form does not fire the action without confirm (4.698667ms)
+✔ a CSRF-forged POST (no valid same-site cookie) to a mutating route is rejected and never mutates state (2.240792ms)
+✔ requests without valid basic auth are rejected with 401 (0.819125ms)
+✔ communicator produces a correctly-structured outreach draft and a pending send-outreach Proposal, never a directly-sent message (8.43625ms)
+✔ multi-provider communicator produces grouped sibling drafts with shared correlationId and provider attribution (182.711417ms)
+✔ communicator refuses to draft outreach for an opportunity that is not "pursuing" (1.763541ms)
+✔ malformed role output (invalid JSON, or missing required fields) is rejected and appends no proposal.created event (2.637458ms)
+✔ parseDraftJson strips a markdown fence; validateOutreachDraft rejects a missing field (0.129625ms)
+✔ deriveRecipient prefers a lead email from the evidence chain, falls back to outreach.fallbackToEmail, and refuses when neither is available (0.080292ms)
+✔ communicator refuses to draft outreach when no recipient can be derived (0.72475ms)
+✔ sendOutreach refuses a pending or rejected proposal, and refuses a proposal missing to/subject/body (1.200209ms)
+✔ sendOutreach against an approved proposal sends via the injected transport and emits outreach.sent with correct causationId/correlationId (1.304166ms)
+✔ approving one sibling outreach proposal blocks later approval of the other before any second approval event is appended (2.461833ms)
+✔ concurrent approval of sibling outreach proposals results in one success, one refusal, and one outreach.sent event (34.0525ms)
+✔ level-2 send-outreach proposal: approving via decideProposal fires sendOutreach exactly once, and /actions lists it with links back to proposal and opportunity (2.405958ms)
+✔ CLI: pursue reports cleanly when there are no pursuing opportunities (77.078458ms)
+✔ writeHandoffArtifact appends research_topics (idempotently) and writes an audit file (3.484875ms)
+✔ writeHandoffArtifact refuses when the target repo has no .e3d-pilot/config.json (0.453792ms)
+✔ proposePilotHandoff requires a "pursuing" opportunity and derives authorityLevel 2 from the policy table (4.254459ms)
+✔ pilotHandoff refuses a non-approved proposal, and against an approved one writes the artifact and emits pilot-handoff.created (4.442542ms)
+✔ checkCapabilityShipped appends capability.shipped for a plausibly-related repo, and reports no match without a false event (8.3705ms)
+✔ checkCapabilityShipped refuses when no pilot-handoff.created event exists yet for the opportunity (1.343458ms)
+✖ knowledge-base listRepos: real integration returns real repos and records evidence (9.920084ms)
+✔ a hand-crafted product-opportunity marked pursuing: proposing and approving a pilot-handoff via the web UI produces a well-formed artifact and pilot-handoff.created with correct correlationId (11.219958ms)
+✔ OUTCOME_TYPES includes the spec-documented starter list, distinguishable from Phase 5 Decision event types (2.510583ms)
+✔ recordOutcome requires a real chain and a known type, and appends an outcome event plus an experience.jsonl snapshot (8.820792ms)
+✔ listOutcomes folds recorded outcome events from the log (4.587375ms)
+✔ assembleExperience against a full fixture chain (event -> opportunity -> proposal -> decision -> action -> outcome) produces a complete record with no missing required field (2.0025ms)
+✔ assembleExperience on a bare chain (just a trigger event, nothing else) still returns every field, with unpopulated fields explicitly null (0.47275ms)
+✔ outcomes record against a real chain from Phase 7 (a sent outreach) correctly appends an outcome event, reflected in reconstructChain regardless of which surface recorded it (108.625083ms)
+✔ CLI: experience show renders a full experience record (81.4555ms)
+✔ normalizeVendorId trims and lowercases vendor IDs (1.40525ms)
+✔ parseAssessmentJson strips markdown fences and normalizeAssessment accepts all verdicts (0.701917ms)
+✔ parseAssessmentJson rejects malformed JSON and empty output (0.210833ms)
+✔ normalizeAssessment rejects extra keys, invalid verdicts, missing fields, blank risk factors, duplicate citations, and fabricated evidence IDs (0.123166ms)
+✔ selectVendorHistory matches exact normalized vendor fields, excludes unrelated events and the request itself, and returns newest first (1.463041ms)
+✔ selectVendorHistory bounds to the 20 newest same-vendor prior events and preserves same-occurredAt log ordering (0.456625ms)
+✔ selectVendorHistory returns an empty array when there is no matching prior vendor history (0.231166ms)
+✔ flag-payment-request resolves to authority level 3 (0.168166ms)
+✔ e3d-trade outcome webhook records an Outcome and Experience idempotently for a submitted mandate chain (7.499584ms)
+✔ e3d-trade outcome webhook rejects invalid auth and outcome-id conflicts (2.1575ms)
+ℹ tests 151
+ℹ suites 0
+ℹ pass 141
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1121.654917
+
+✖ failing tests:
+
+test at test/e3dTradeAcceptance.test.js:1:1
+✖ test/e3dTradeAcceptance.test.js (43.296958ms)
+  'test failed'
+
+test at test/phase1.test.js:83:1
+✖ cli config validate accepts the futco instance config (81.292ms)
+  Error: Command failed: /Users/mini/.local/share/fnm/node-versions/v26.7.0/installation/bin/node /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/bin/e3d-corp config validate .e3d-corp/instance/futco/instance.json
+  Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json
+  
+      at genericNodeError (node:internal/errors:999:15)
+      at wrappedFn (node:internal/errors:544:14)
+      at checkExecSyncError (node:child_process:942:11)
+      at execFileSync (node:child_process:978:15)
+      at runCli (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase1.test.js:17:10)
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase1.test.js:84:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19) {
+    status: 1,
+    signal: null,
+    output: [ null, '', 'Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json\n' ],
+    pid: 21591,
+    stdout: '',
+    stderr: 'Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json\n'
+  }
+
+test at test/phase1.test.js:373:1
+✖ futco instance directory placeholder exists (0.427084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase1.test.js:375:10)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/phase1.test.js:379:1
+✖ example and futco configs use the provider registry shape (0.15975ms)
+  Error: ENOENT: no such file or directory, open '/private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json'
+      at Object.readFileSync (node:fs:539:20)
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase1.test.js:381:31)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json'
+  }
+
+test at test/phase10.test.js:426:1
+✖ Phase 10 real-data bar: evaluate report against real (even sparse) FutCo data produces a real, non-fabricated report (0.210166ms)
+  Error: Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json
+      at loadInstanceConfig (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/lib/config.js:395:19)
+      at loadInstance (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/lib/config.js:427:18)
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase10.test.js:427:23)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ENOENT'
+  }
+
+test at test/phase3.test.js:58:1
+✖ futco instance config declares the e3d-applied lead-capture source (0.403ms)
+  Error: Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json
+      at loadInstanceConfig (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/lib/config.js:395:19)
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase3.test.js:59:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.start (node:internal/test_runner/test:1257:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    code: 'ENOENT'
+  }
+
+test at test/phase3.test.js:66:1
+✖ research adapter returns real knowledge-base results and appends evidence (22.867208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase3.test.js:89:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/phase3.test.js:108:1
+✖ research adapter parses repo info and records evidence for the repo lookup (2.285708ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase3.test.js:131:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/phase4.test.js:1232:1
+✖ futco instance config declares the opportunity.prospect role and real research topics (0.131208ms)
+  Error: Config file not found: /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/.e3d-corp/instance/futco/instance.json
+      at loadInstanceConfig (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/lib/config.js:395:19)
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase4.test.js:1233:18)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1397:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:969:18)
+      at Test.postRun (node:internal/test_runner/test:1537:19)
+      at Test.run (node:internal/test_runner/test:1462:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    code: 'ENOENT'
+  }
+
+test at test/phase8.test.js:358:1
+✖ knowledge-base listRepos: real integration returns real repos and records evidence (9.920084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918062109.kfqMkM/test/phase8.test.js:374:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+Status: phase 1 failed with exit status 1.

@@ -1,45 +1,53 @@
 # Phase 1 Summary
 
 - Phase: 1
-- Title: Payment Request Intake and Risk Assessment
+- Title: Vendor history selection and assessment validation (pure helpers)
 - Provider: codex
 - Model: gpt-5.4
-- Completed: 2026-09-18T05:45:52-0700
+- Completed: 2026-09-18T06:06:51-0700
 - Exit status: 1
 
 ## Implementation Handoff
 
-- Implemented Phase 1 payment request intake and risk assessment.
-- Extended `ACTION_POLICY` with `flag-payment-request` at authority level 3 and bumped policy version to 3.
-- Added `lib/roles/riskAssess.js` with vendor ID normalization, bounded vendor-history selection, JSON parsing/validation, grounded evidence enforcement, and `runRiskAssess`.
-- `runRiskAssess` reads stored history, uses only the first configured provider for `roles["risk.assess"]`, supports injected `llmClient`, and creates exactly one pending `proposal.created` event for `flag-payment-request`.
-- The role does not append decisions, actions, provider completion events, or the initial request event.
-- Added CLI support for `request submit ...` with pre-load flag validation for required strings, positive amount, ISO-parsable due date, uppercase 3-letter currency, and optional reference handling.
-- Valid submissions now append one normalized `payment-request.received` event, then await `runRiskAssess`, and print a concise success line with request/proposal/verdict/status/authority details.
-- Added `risk.assess` to `examples/instance.example.json` using the existing `local` provider.
-- Added focused tests in `test/riskAssess.test.js` for schema normalization, malformed output rejection, vendor-history selection rules, proposal creation, causation/correlation preservation, CLI validation/help, provider attribution, invalid model output handling, and executor absence.
-- Updated `test/phase5.test.js` to expect policy version 3 in the existing authority-level guard assertion.
+- Phase 1 completed for pure risk-assessment helpers only; no Phase 2 orchestration was added.
+- Updated `lib/authority/policy.js` to map `flag-payment-request` to `AUTHORITY_LEVELS.FINANCIAL_ACTION` and bumped `ACTION_POLICY_VERSION` to `3`.
+- Added `lib/roles/riskAssess.js` exporting only:
+  - `normalizeVendorId`
+  - `selectVendorHistory`
+  - `parseAssessmentJson`
+  - `normalizeAssessment`
+- `normalizeVendorId` trims and lowercases vendor IDs.
+- `selectVendorHistory` matches vendor history by normalized `subject.id` or string `payload.vendorId`, excludes the request itself, respects same-timestamp log order, sorts newest-first, and caps history at 20 events.
+- `parseAssessmentJson` strips a wrapping markdown fence before `JSON.parse` and rejects empty or invalid output.
+- `normalizeAssessment` enforces the exact Phase 1 schema, trims strings, and rejects extra keys, missing fields, invalid verdicts, blank strings, duplicate evidence IDs, and evidence IDs outside the supplied allowed set.
+- Added focused coverage in `test/riskAssess.test.js` for:
+  - all three verdicts
+  - empty `riskFactors` / `evidenceEventIds`
+  - malformed JSON and schema violations
+  - vendor-history selection via both matching paths
+  - same-`occurredAt` ordering
+  - 20-event bounding
+  - empty-history case
+  - policy resolution for `flag-payment-request`
+- Updated `test/phase5.test.js` expectation from `policy v2` to `policy v3`.
 
 - Tests run:
-- `node --test test/riskAssess.test.js`
-- `node --test test/riskAssess.test.js test/phase5.test.js`
-- `npm run check`
+  - `node --test test/riskAssess.test.js` ✅
+  - `npm install && npm run check` ❌
 
-- `npm run check` still fails for unrelated workspace/environment issues:
-- Missing external fixture/module paths for FutCo / `e3d-trade`.
-- Real integration tests that currently return `unavailable` instead of `ok`.
+- Verification blocker from full repo check was pre-existing and outside Phase 1 scope:
+  - missing `.e3d-corp/instance/futco/instance.json`
+  - missing sibling `e3d-trade` checkout used by `test/e3dTradeAcceptance.test.js`
+  - real integration tests expecting available knowledge-base / Grok CLI fixtures
 
-- No Phase 2+ behavior was implemented.
+- Unresolved follow-up for later phases: add `runRiskAssess` orchestration and Proposal creation in `lib/roles/riskAssess.js` without changing these helper contracts.
 
 ## Verification
 - failed (1): `npm install && npm run check`
 
 ## Worktree Snapshot
 - ` M .codex-spec-runner/manifest.tsv`
-- ` M examples/instance.example.json`
 - ` M lib/authority/policy.js`
-- ` M lib/cli.js`
 - ` M test/phase5.test.js`
-- `?? .e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260917140915/`
 - `?? lib/roles/riskAssess.js`
 - `?? test/riskAssess.test.js`

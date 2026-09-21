@@ -1,0 +1,28 @@
+2026-08-13T08:07:29-0700	docs/build-e3d-corp.md	1	Repo Scaffold, Instance Config, and Runtime Foundation	codex	gpt-5.4-mini	exec	0	0
+2026-08-13T10:34:23-0700	docs/build-e3d-corp.md	2	Company Event Store	claude	sonnet	exec	0	0
+2026-08-13T10:54:58-0700	docs/build-e3d-corp.md	3	Research/Evidence Layer	codex	gpt-5.4-mini	exec	0	0
+2026-08-13T11:22:44-0700	docs/build-e3d-corp.md	4	Opportunity Model and Opportunity Engine	claude	sonnet	exec	0	0
+2026-08-14T06:55:32-0700	docs/build-e3d-corp.md	5	Proposal, Authority Policy, and Decision Framework	claude	sonnet	exec	0	0
+2026-08-14T08:02:09-0700	docs/build-e3d-corp.md	6	Web UI: Opportunity and Proposal Review	claude	sonnet	exec	0	0
+2026-08-14T12:08:27-0700	docs/build-e3d-corp.md	7	Pursuit: Outreach Role and Approved External Actions	claude	sonnet	exec	0	0
+2026-08-14T13:15:00-0700	docs/build-e3d-corp.md	8	e3d-pilot Handoff Contract	claude	sonnet	exec	0	0
+2026-08-14T14:10:00-0700	docs/build-e3d-corp.md	9	Outcome Capture and Experience Log	claude	sonnet	exec	0	0
+2026-08-14T15:00:00-0700	docs/build-e3d-corp.md	10	Evaluation and Metrics	claude	sonnet	exec	0	0
+2026-08-22T06:21:45-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	1	0
+2026-08-22T06:21:49-0700	docs/build-multi-provider-roles.md	1	Provider Registry, Hosted HTTP Client, and the Grok CLI/Subscription Provider	codex	gpt-5.4	exec	0	0
+2026-08-22T06:35:40-0700	docs/build-multi-provider-roles.md	2	Multi-Provider Fan-Out for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-22T06:41:08-0700	docs/build-multi-provider-roles.md	3	Multi-Provider Fan-Out for `opportunity.communicator`	codex	gpt-5.4	exec	0	0
+2026-08-23T08:02:24-0700	docs/build-llm-budget.md	1	Real Usage/Cost Capture on Every Provider Call	codex	gpt-5.4	exec	0	0
+2026-08-23T08:09:06-0700	docs/build-llm-budget.md	2	Event-Sourced Budget Ledger, Config, and Reporting	codex	gpt-5.4	exec	0	0
+2026-08-23T08:15:52-0700	docs/build-llm-budget.md	3	Boss-Signaled, Budget-Gated Elective Second Opinions for `opportunity.prospect`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:36:44-0700	docs/build-prospect-quality.md	1	Self-Exclusion Filtering, `counterparty`, and `pursuable`	codex	gpt-5.4	exec	0	0
+2026-08-25T20:42:45-0700	docs/build-prospect-quality.md	2	Surface Pursuable and Counterparty in the CLI and Web UI	codex	gpt-5.4	exec	0	0
+2026-08-27T17:07:44-0700	docs/e3d-corp-e3d-trade-stack-spec.md	1	Preflight and Verification	codex	gpt-5.5	exec	0	0
+2026-08-27T17:12:32-0700	docs/e3d-corp-e3d-trade-stack-spec.md	2	Investing Opportunity Scorer (`e3d-corp`)	codex	gpt-5.4	exec	0	0
+2026-08-27T17:18:12-0700	docs/e3d-corp-e3d-trade-stack-spec.md	3	`capital_mandate` Proposal Type (`e3d-corp`)	codex	gpt-5.5	exec	0	0
+2026-08-27T17:23:05-0700	docs/e3d-corp-e3d-trade-stack-spec.md	4	Approved-Mandate Action and Service Client (`e3d-corp`)	codex	gpt-5.5	exec	0	0
+2026-08-27T19:54:02-0700	docs/e3d-corp-e3d-trade-stack-spec.md	5	`e3d-trade` Mandate Intake and Constraint Integration	codex	gpt-5.5	exec	0	0
+2026-08-27T20:02:19-0700	docs/e3d-corp-e3d-trade-stack-spec.md	6	`e3d-trade` Outcome-Return Path	codex	gpt-5.4	exec	0	0
+2026-08-27T20:11:15-0700	docs/e3d-corp-e3d-trade-stack-spec.md	7	Acceptance Tests	codex	gpt-5.5	exec	0	0
+2026-08-27T20:14:07-0700	docs/e3d-corp-e3d-trade-stack-spec.md	8	Governed vs. Ungoverned Experiment Readiness Report	codex	gpt-5.4	exec	0	0
+2026-09-18T10:17:55-0700	/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260918101747/spec-final.md	1	Vendor history selection and assessment validation (pure helpers)	codex	gpt-5.4	exec	0	1

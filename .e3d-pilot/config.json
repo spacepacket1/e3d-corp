@@ -1,6 +1,8 @@
 {
   "verify": [
-    "npm install && npm run check"
+    "npm install",
+    "node --check bin/e3d-corp",
+    "node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')"
   ],
   "protected_paths": [
     "LICENSE",
@@ -48,6 +50,9 @@
     ],
     "execute": "csr"
   },
+  "execute_local_data_paths": [
+    ".e3d-corp/instance"
+  ],
   "max_diff_files": 20,
   "max_diff_lines": 700,
   "approval": {

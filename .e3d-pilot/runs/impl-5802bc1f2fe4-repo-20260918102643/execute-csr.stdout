@@ -1,0 +1,404 @@
+ok: spec file exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260918102643/spec-final.md
+ok: root directory exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID
+ok: --from phase is numeric: 1
+ok: --to phase is numeric: 3
+ok: selected 3 phase(s) for target all
+ok: verification shell found on PATH: bash
+ok: Codex binary found on PATH: codex
+result: ok
+== Phase 1: Vendor history selection and assessment validation (pure helpers) ==
+Provider: codex
+Model: gpt-5.4
+Status: starting Codex phase run.
+Phase 1 is implemented and scoped to the pure-helper surface.
+
+I added the `flag-payment-request` policy entry at authority level 3 and bumped the policy version to `v3`. I also added `lib/roles/riskAssess.js` with only the Phase 1 helpers: vendor ID normalization, deterministic vendor-history selection, fenced-JSON parsing, and strict assessment normalization/validation. The stale `v2` assertion in `test/phase5.test.js` was updated, and focused Phase 1 coverage was added in `test/riskAssess.test.js`.
+
+Verification:
+- `node --check lib/roles/riskAssess.js` passed.
+- `node --test test/riskAssess.test.js test/phase5.test.js` passed.
+- The runner command with the documented skip pattern passed:
+  `npm install && node --check bin/e3d-corp && node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')`
+
+Issue:
+- `npm run check` still fails in this workspace for pre-existing non-Phase-1 reasons: `test/e3dTradeAcceptance.test.js` imports a missing external `e3d-trade` module, and the real-integration tests in `test/phase3.test.js` and `test/phase8.test.js` expect live knowledge-base results. I recorded that in the required handoff at [.codex-spec-runner/summaries/phase-1.md](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/.codex-spec-runner/summaries/phase-1.md).
+Provider tokens: 66379 (ceiling: 120000)
+Verification: running npm install && node --check bin/e3d-corp && node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')
+
+up to date, audited 25 packages in 208ms
+
+found 0 vulnerabilities
+✔ capital_mandate action refuses an unapproved proposal before contacting e3d-trade (4.45675ms)
+✔ confirming an approved capital_mandate submits active payload and records activation only after accepted ack (3.254167ms)
+✔ unconfirmed e3d-trade acknowledgement leaves mandate approved, not active (2.147125ms)
+✔ duplicate confirm of the same mandate is idempotent in e3d-corp and does not resubmit (2.913834ms)
+✔ trade client retries timeout/5xx safely and surfaces conflicts without retrying (318.296542ms)
+✔ capital_mandate schema validates the full lifecycle field set and deterministic mandate id (3.557167ms)
+✔ capital_mandate lifecycle accepts only the declared forward path (0.365542ms)
+✔ capital_mandate constraints reject relaxation, override, bypass, and live-execution signals (0.381375ms)
+✔ capital_mandate proposal uses the existing human-gated Proposal and Decision pipeline (3.813834ms)
+✔ createProposal rejects malformed capital_mandate payloads without a partial write (0.991125ms)
+✔ Phase 8 readiness report exists and covers the required readiness conclusions (0.605083ms)
+✔ buildPrompt separates E3D theses, stories, and market state for the investing role (0.820917ms)
+✔ runInvestingOpportunityScorer returns a normalized investment candidate and provider telemetry without mutating opportunity state (6.229625ms)
+✔ invented thesis or story references are rejected and recorded as a provider failure (1.498625ms)
+✔ parseCandidateJson and investing schema reject malformed or incomplete role output (0.144667ms)
+✔ validateInstanceConfig accepts the example config (1.00825ms)
+✔ cli config validate passes for the example config (95.744542ms)
+✔ cli config validate fails clearly for a missing file (82.995625ms)
+✔ cli config validate accepts the futco instance config (77.953834ms)
+✔ help output documents provider status and later-phase commands (67.609125ms)
+✔ legacy flat llm config fails validation with an explicit llm.providers migration error (0.163ms)
+✔ unknown role provider fails validation with a role-specific error (0.096125ms)
+✔ providers status reports missing Grok binary and missing hosted API key without making a call (67.05725ms)
+✔ resolveProvider returns grok-cli-default when no model env var is configured (0.515125ms)
+✔ resolveProvider names the missing env var for hosted providers (0.151084ms)
+✔ local HTTP provider aborts on timeout instead of hanging (52.359459ms)
+✔ local HTTP provider returns text plus normalized usage (0.273792ms)
+✔ grok CLI provider kills the subprocess on timeout (53.393708ms)
+✔ grok CLI provider parses JSON output into text, usage, and cost (194.934708ms)
+✔ grok CLI provider treats malformed JSON output as a call failure (119.953875ms)
+✔ futco instance directory placeholder exists (0.158083ms)
+✔ example and futco configs use the provider registry shape (0.195417ms)
+✔ computeMetrics against a fixture with a known mix of outcomes matches hand-computed expected values for every metric (18.421334ms)
+✔ computeMetrics --since filters out opportunities/events before the cutoff (12.052417ms)
+✔ formatMetricsReport renders human-readable rates and honestly reports "no data" rather than a fabricated 0%/number (0.498666ms)
+✔ CLI: evaluate report renders the same fixture metrics as computeMetrics (99.064709ms)
+✔ web /metrics renders the same fixture metrics as computeMetrics (7.501292ms)
+✔ computeMetrics includes the same budget status objects computeBudgetStatus returns directly (7.200209ms)
+✔ Phase 10 real-data bar: evaluate report against real (even sparse) FutCo data produces a real, non-fabricated report (200.777833ms)
+✔ appendEvent generates id/occurredAt when absent and persists the record (3.354ms)
+✔ appendEvent rejects an event missing required fields (0.403625ms)
+✔ appendEvent rejects a causationId that does not resolve to an existing event (0.230625ms)
+✔ appendEvent accepts a causationId pointing at a real prior event (0.470833ms)
+✔ queryEvents filters by type, correlationId, and since (0.809791ms)
+✔ validateInstanceConfig accepts llm.budget and rejects unsupported period or unknown budget providers (0.371208ms)
+✔ computeBudgetStatus reports settled spend, outstanding reservations, non-negative remaining, and UTC day boundaries (3.510083ms)
+✔ reserveBudget is lock-safe under concurrency and unlimited providers always grant (18.945334ms)
+✔ settleReservation records the settled provider event and budget status reflects the settled tokens (2.019583ms)
+✔ CLI: budget status renders computeBudgetStatus numbers for configured providers (95.9365ms)
+✔ reconstructChain returns a hand-crafted 4-event chain in correct causal order (1.061042ms)
+✔ reconstructChain orders events by occurredAt regardless of append order (0.839042ms)
+✔ event add generates a fresh correlationId; a second add with --correlation links to the same chain (212.538625ms)
+✔ event add rejects invalid --payload JSON with a clear error (63.290833ms)
+✔ event add surfaces a causationId validation error through the CLI (64.115708ms)
+✔ concurrent event add invocations do not corrupt events.jsonl (168.950208ms)
+✔ appendEvent links each record to the one before it, and the chain verifies (0.776042ms)
+✔ verifyEventChain names the first altered record, and reports what a chain alone cannot catch (0.857875ms)
+✔ adopting chaining on an existing unchained log seals the legacy prefix rather than rewriting it (0.523292ms)
+✔ publishAnchor records the head and count, and the anchor event agrees with the chain (0.861084ms)
+✔ an anchor catches a full rewrite and a truncated tail — the two failures the chain alone cannot see (1.027291ms)
+✔ only an externally held anchor catches truncation — in-log anchors structurally cannot (1.033209ms)
+✔ anchor email config fails closed, and the body carries no business content (0.208208ms)
+✔ CLI: event verify reports an intact chain and exits non-zero on a broken one (232.956375ms)
+✔ futco instance config declares the e3d-applied lead-capture source (0.763042ms)
+✔ web search uses the configured provider and appends evidence (13.01575ms)
+✔ web search includes the configured API key from the referenced env var (1.116417ms)
+✔ research adapter returns documented unavailable results when providers are unreachable (3.11775ms)
+✔ recordLeadReceived creates lead.received with a fresh correlationId (0.857458ms)
+✔ runOpportunityEngine produces a correctly-typed opportunity and a traceable event chain from a stubbed LLM (4.807375ms)
+✔ malformed role output (invalid JSON) is rejected and appends no opportunity.created event (1.407708ms)
+✔ malformed role output (missing required fields) is rejected and appends no opportunity.created event (1.12525ms)
+✔ parseCandidateJson strips a markdown fence but still rejects genuinely broken JSON (0.121208ms)
+✔ buildPrompt excludes own-domain evidence results before truncation and leaves non-URL items untouched (0.268417ms)
+✔ buildPrompt leaves evidence unchanged when ownDomains is omitted or empty and the prompt requires counterparty honesty (0.17ms)
+✔ normalizeOpportunityCandidate enforces counterparty rules and preserves it on valid candidates (0.112792ms)
+✔ runOpportunityEngine stores counterparty and derives pursuable deterministically (4.20725ms)
+✔ listOpportunities sorts pursuable first and treats a missing pursuable field as false (4.88925ms)
+✔ boss-only prospect run produces one Opportunity, one completion, and never touches the second provider (1.319ms)
+✔ boss-requested second opinion uses only the next provider, settles the reservation, and creates two Opportunities (4.057209ms)
+✔ budget exhaustion skips the elective second opinion and records role.provider.skipped (1.929083ms)
+✔ boss failure falls back to the next provider without any budget reservation (1.438042ms)
+✔ fallback continues through the full provider list until one provider succeeds (2.636583ms)
+✔ a boss request for a second opinion reaches at most the next provider in the list (2.173417ms)
+✔ scoreOpportunity is a deterministic, documented combination of confidence/evidence/recency/type weight (0.097834ms)
+✔ runDiscoveryPass processes each research topic independently and tolerates a per-topic failure (2.813375ms)
+✔ opportunity engine grounds candidates in real knowledge-base evidence with correct causation/correlation (18.55675ms)
+✔ opportunities list and show CLI commands render pursuable-first rows, filters, counterparty data, and missing-field fallback (362.694166ms)
+✔ opportunities show reports a clear error for an unknown id (62.273583ms)
+✔ instance config validation accepts researchTopics/scoring and rejects malformed values (0.164625ms)
+✔ futco instance config declares the opportunity.prospect role and real research topics (0.174625ms)
+Proposal 108a7d0e-bd0f-4f44-a01c-d35e6c27cac8 must be approved before confirmAndExecute (status: pending)
+Proposal 108a7d0e-bd0f-4f44-a01c-d35e6c27cac8: approved
+Proposal 108a7d0e-bd0f-4f44-a01c-d35e6c27cac8: confirmed, action executed
+Proposal cda9b016-3e4c-499e-8437-2d203f2a8650: approved (action executed immediately)
+Proposal cda9b016-3e4c-499e-8437-2d203f2a8650 is authority level 2; level-2 actions already execute on approval and do not use confirmAndExecute
+✔ authority policy: known action types map to documented levels; unknown types fail closed (0.529209ms)
+✔ assertProposalAuthorized refuses a pending proposal and passes an approved one at the matching type/level (6.247292ms)
+✔ createProposal derives authorityLevel from the policy table and rejects malformed input without a partial write (1.037917ms)
+✔ decideOpportunity requires a reason, rejects unknown decisions, and appends opportunity.reviewed with via recorded (1.330166ms)
+✔ level-2 proposal: approval and execution are the same call; a pending proposal refuses the action directly (2.409166ms)
+✔ level-3/4 proposals require the separate confirmAndExecute step and do not fire on approval alone (4.814959ms)
+✔ rejecting a proposal never executes its action, at any level (1.601792ms)
+✔ full causal chain from originating event through opportunity.reviewed and proposal.created -> proposal.approved is reconstructable via correlationId, with via recorded (2.471916ms)
+✔ authorityNotify is best-effort: absent config, and a failing command, never throw or block proposal creation (8.453959ms)
+✔ CLI: a hand-crafted proposal at each authority level can be approved or rejected via the CLI wrapper (352.381667ms)
+✔ CLI: opportunities decide transitions status and requires --status and --reason (192.331833ms)
+✔ CLI: `proposals confirm` is the level-3/4 second step, and refuses what confirmAndExecute refuses (126.223541ms)
+✔ web server refuses to start with no auth env vars configured, naming the missing credential (3.086958ms)
+✔ startWebServer throws the same way, before ever listening, when credentials are missing (0.954542ms)
+✔ GET /opportunities/:id renders a causal chain identical in content to `opportunities show` (89.633334ms)
+✔ GET /opportunities and /opportunities/:id render pursuable state and counterparty details for current and historical records (3.050291ms)
+✔ approving a level-2 proposal via the web form fires the action exactly once and records via: "web" (4.089667ms)
+✔ single-step approve on a level-3/4 proposal via the web form does not fire the action without confirm (3.054375ms)
+✔ a CSRF-forged POST (no valid same-site cookie) to a mutating route is rejected and never mutates state (1.220375ms)
+✔ requests without valid basic auth are rejected with 401 (0.420958ms)
+✔ communicator produces a correctly-structured outreach draft and a pending send-outreach Proposal, never a directly-sent message (6.020083ms)
+✔ multi-provider communicator produces grouped sibling drafts with shared correlationId and provider attribution (151.394916ms)
+✔ communicator refuses to draft outreach for an opportunity that is not "pursuing" (1.289208ms)
+✔ malformed role output (invalid JSON, or missing required fields) is rejected and appends no proposal.created event (2.4035ms)
+✔ parseDraftJson strips a markdown fence; validateOutreachDraft rejects a missing field (0.1045ms)
+✔ deriveRecipient prefers a lead email from the evidence chain, falls back to outreach.fallbackToEmail, and refuses when neither is available (0.072125ms)
+✔ communicator refuses to draft outreach when no recipient can be derived (0.797833ms)
+✔ sendOutreach refuses a pending or rejected proposal, and refuses a proposal missing to/subject/body (0.909666ms)
+✔ sendOutreach against an approved proposal sends via the injected transport and emits outreach.sent with correct causationId/correlationId (1.121167ms)
+✔ approving one sibling outreach proposal blocks later approval of the other before any second approval event is appended (2.114334ms)
+✔ concurrent approval of sibling outreach proposals results in one success, one refusal, and one outreach.sent event (35.688375ms)
+✔ level-2 send-outreach proposal: approving via decideProposal fires sendOutreach exactly once, and /actions lists it with links back to proposal and opportunity (1.881375ms)
+✔ CLI: pursue reports cleanly when there are no pursuing opportunities (68.765291ms)
+✔ writeHandoffArtifact appends research_topics (idempotently) and writes an audit file (4.157625ms)
+✔ writeHandoffArtifact refuses when the target repo has no .e3d-pilot/config.json (0.455791ms)
+✔ proposePilotHandoff requires a "pursuing" opportunity and derives authorityLevel 2 from the policy table (7.046125ms)
+✔ pilotHandoff refuses a non-approved proposal, and against an approved one writes the artifact and emits pilot-handoff.created (7.412208ms)
+✔ checkCapabilityShipped appends capability.shipped for a plausibly-related repo, and reports no match without a false event (1.82475ms)
+✔ checkCapabilityShipped refuses when no pilot-handoff.created event exists yet for the opportunity (2.044333ms)
+✔ a hand-crafted product-opportunity marked pursuing: proposing and approving a pilot-handoff via the web UI produces a well-formed artifact and pilot-handoff.created with correct correlationId (8.254667ms)
+✔ OUTCOME_TYPES includes the spec-documented starter list, distinguishable from Phase 5 Decision event types (0.489916ms)
+✔ recordOutcome requires a real chain and a known type, and appends an outcome event plus an experience.jsonl snapshot (5.3335ms)
+✔ listOutcomes folds recorded outcome events from the log (3.328291ms)
+✔ assembleExperience against a full fixture chain (event -> opportunity -> proposal -> decision -> action -> outcome) produces a complete record with no missing required field (4.882166ms)
+✔ assembleExperience on a bare chain (just a trigger event, nothing else) still returns every field, with unpopulated fields explicitly null (0.611584ms)
+✔ outcomes record against a real chain from Phase 7 (a sent outreach) correctly appends an outcome event, reflected in reconstructChain regardless of which surface recorded it (88.00125ms)
+✔ CLI: experience show renders a full experience record (76.888042ms)
+✔ normalizeVendorId trims and lowercases vendor ids (1.053416ms)
+✔ parseAssessmentJson accepts bare JSON and fenced JSON (0.931291ms)
+✔ parseAssessmentJson rejects empty and malformed JSON (0.197625ms)
+✔ normalizeAssessment accepts and normalizes all supported verdicts, including empty arrays (0.6205ms)
+✔ normalizeAssessment rejects extra keys, invalid verdicts, missing fields, blank risk factors, duplicate evidence ids, and fabricated ids (0.21275ms)
+✔ selectVendorHistory matches exact normalized vendor ids via subject.id and payload.vendorId, excludes the request and unrelated vendors, and keeps newest first (0.754875ms)
+✔ selectVendorHistory treats same-occurredAt earlier log entries as prior history and later ones as newer than the request (0.078667ms)
+✔ selectVendorHistory bounds to the 20 newest matching events and returns empty history when nothing matches (0.137458ms)
+✔ authority policy maps flag-payment-request to level 3 (0.072584ms)
+✔ e3d-trade outcome webhook records an Outcome and Experience idempotently for a submitted mandate chain (6.922833ms)
+✔ e3d-trade outcome webhook rejects invalid auth and outcome-id conflicts (1.848708ms)
+ℹ tests 148
+ℹ suites 0
+ℹ pass 148
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 966.457834
+Status: phase 1 completed.
+== Phase 2: Risk assessment orchestration (runRiskAssess) ==
+Provider: codex
+Model: gpt-5.4
+Status: starting Codex phase run.
+**Phase 2 Status**
+
+Implemented `runRiskAssess` in [lib/roles/riskAssess.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/lib/roles/riskAssess.js) and expanded [test/riskAssess.test.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/test/riskAssess.test.js) for the end-to-end request-to-proposal path. The role now resolves a single configured provider, loads bounded vendor-relevant history, builds the assessment prompt, validates grounded evidence IDs, and creates exactly one pending `flag-payment-request` proposal without appending decisions, actions, or provider telemetry. I also wrote the handoff to [.codex-spec-runner/summaries/phase-2.md](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/.codex-spec-runner/summaries/phase-2.md).
+
+**Verification**
+
+Passed:
+- `npm install`
+- `node --check bin/e3d-corp`
+- `node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')`
+
+Issue still present outside this phase:
+- Bare `npm run check` fails for pre-existing reasons unrelated to `runRiskAssess`: `test/e3dTradeAcceptance.test.js` imports a missing external `e3d-trade` module, and the real knowledge-base integration tests in `test/phase3.test.js` and `test/phase8.test.js` currently return `unavailable`.
+Provider tokens: 98709 (ceiling: 120000)
+Verification: running npm install && node --check bin/e3d-corp && node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')
+
+up to date, audited 25 packages in 257ms
+
+found 0 vulnerabilities
+✔ capital_mandate action refuses an unapproved proposal before contacting e3d-trade (4.3425ms)
+✔ confirming an approved capital_mandate submits active payload and records activation only after accepted ack (2.726459ms)
+✔ unconfirmed e3d-trade acknowledgement leaves mandate approved, not active (1.611833ms)
+✔ duplicate confirm of the same mandate is idempotent in e3d-corp and does not resubmit (3.46775ms)
+✔ trade client retries timeout/5xx safely and surfaces conflicts without retrying (315.256625ms)
+✔ capital_mandate schema validates the full lifecycle field set and deterministic mandate id (3.409542ms)
+✔ capital_mandate lifecycle accepts only the declared forward path (1.041083ms)
+✔ capital_mandate constraints reject relaxation, override, bypass, and live-execution signals (0.596333ms)
+✔ capital_mandate proposal uses the existing human-gated Proposal and Decision pipeline (3.904584ms)
+✔ createProposal rejects malformed capital_mandate payloads without a partial write (0.554708ms)
+✔ Phase 8 readiness report exists and covers the required readiness conclusions (0.575459ms)
+✔ buildPrompt separates E3D theses, stories, and market state for the investing role (1.018208ms)
+✔ runInvestingOpportunityScorer returns a normalized investment candidate and provider telemetry without mutating opportunity state (5.798166ms)
+✔ invented thesis or story references are rejected and recorded as a provider failure (1.230125ms)
+✔ parseCandidateJson and investing schema reject malformed or incomplete role output (0.125375ms)
+✔ validateInstanceConfig accepts the example config (0.987208ms)
+✔ cli config validate passes for the example config (81.901209ms)
+✔ cli config validate fails clearly for a missing file (76.320667ms)
+✔ cli config validate accepts the futco instance config (70.882875ms)
+✔ help output documents provider status and later-phase commands (69.25625ms)
+✔ legacy flat llm config fails validation with an explicit llm.providers migration error (0.164875ms)
+✔ unknown role provider fails validation with a role-specific error (0.092541ms)
+✔ providers status reports missing Grok binary and missing hosted API key without making a call (64.253666ms)
+✔ resolveProvider returns grok-cli-default when no model env var is configured (0.614917ms)
+✔ resolveProvider names the missing env var for hosted providers (0.176333ms)
+✔ local HTTP provider aborts on timeout instead of hanging (52.189959ms)
+✔ local HTTP provider returns text plus normalized usage (0.25ms)
+✔ grok CLI provider kills the subprocess on timeout (53.503083ms)
+✔ grok CLI provider parses JSON output into text, usage, and cost (200.277666ms)
+✔ grok CLI provider treats malformed JSON output as a call failure (132.651917ms)
+✔ futco instance directory placeholder exists (0.156084ms)
+✔ example and futco configs use the provider registry shape (0.18375ms)
+✔ computeMetrics against a fixture with a known mix of outcomes matches hand-computed expected values for every metric (11.668041ms)
+✔ computeMetrics --since filters out opportunities/events before the cutoff (6.797584ms)
+✔ formatMetricsReport renders human-readable rates and honestly reports "no data" rather than a fabricated 0%/number (0.415416ms)
+✔ CLI: evaluate report renders the same fixture metrics as computeMetrics (98.518708ms)
+✔ web /metrics renders the same fixture metrics as computeMetrics (9.281375ms)
+✔ computeMetrics includes the same budget status objects computeBudgetStatus returns directly (6.405167ms)
+✔ Phase 10 real-data bar: evaluate report against real (even sparse) FutCo data produces a real, non-fabricated report (193.2335ms)
+✔ appendEvent generates id/occurredAt when absent and persists the record (3.915583ms)
+✔ appendEvent rejects an event missing required fields (0.519291ms)
+✔ appendEvent rejects a causationId that does not resolve to an existing event (0.328125ms)
+✔ appendEvent accepts a causationId pointing at a real prior event (0.6645ms)
+✔ queryEvents filters by type, correlationId, and since (1.091875ms)
+✔ validateInstanceConfig accepts llm.budget and rejects unsupported period or unknown budget providers (0.416708ms)
+✔ computeBudgetStatus reports settled spend, outstanding reservations, non-negative remaining, and UTC day boundaries (2.016459ms)
+✔ reserveBudget is lock-safe under concurrency and unlimited providers always grant (18.32825ms)
+✔ settleReservation records the settled provider event and budget status reflects the settled tokens (0.875083ms)
+✔ CLI: budget status renders computeBudgetStatus numbers for configured providers (95.013958ms)
+✔ reconstructChain returns a hand-crafted 4-event chain in correct causal order (0.9545ms)
+✔ reconstructChain orders events by occurredAt regardless of append order (0.49375ms)
+✔ event add generates a fresh correlationId; a second add with --correlation links to the same chain (204.351708ms)
+✔ event add rejects invalid --payload JSON with a clear error (61.146833ms)
+✔ event add surfaces a causationId validation error through the CLI (63.82175ms)
+✔ concurrent event add invocations do not corrupt events.jsonl (167.716334ms)
+✔ appendEvent links each record to the one before it, and the chain verifies (0.832958ms)
+✔ verifyEventChain names the first altered record, and reports what a chain alone cannot catch (0.947291ms)
+✔ adopting chaining on an existing unchained log seals the legacy prefix rather than rewriting it (0.794834ms)
+✔ publishAnchor records the head and count, and the anchor event agrees with the chain (1.040458ms)
+✔ an anchor catches a full rewrite and a truncated tail — the two failures the chain alone cannot see (1.039ms)
+✔ only an externally held anchor catches truncation — in-log anchors structurally cannot (1.001416ms)
+✔ anchor email config fails closed, and the body carries no business content (0.188125ms)
+✔ CLI: event verify reports an intact chain and exits non-zero on a broken one (234.08675ms)
+✔ futco instance config declares the e3d-applied lead-capture source (0.76725ms)
+✔ web search uses the configured provider and appends evidence (11.863125ms)
+✔ web search includes the configured API key from the referenced env var (4.700125ms)
+✔ research adapter returns documented unavailable results when providers are unreachable (2.672459ms)
+✔ recordLeadReceived creates lead.received with a fresh correlationId (0.71275ms)
+✔ runOpportunityEngine produces a correctly-typed opportunity and a traceable event chain from a stubbed LLM (6.701708ms)
+✔ malformed role output (invalid JSON) is rejected and appends no opportunity.created event (1.187875ms)
+✔ malformed role output (missing required fields) is rejected and appends no opportunity.created event (1.016125ms)
+✔ parseCandidateJson strips a markdown fence but still rejects genuinely broken JSON (0.106875ms)
+✔ buildPrompt excludes own-domain evidence results before truncation and leaves non-URL items untouched (0.247125ms)
+✔ buildPrompt leaves evidence unchanged when ownDomains is omitted or empty and the prompt requires counterparty honesty (0.168333ms)
+✔ normalizeOpportunityCandidate enforces counterparty rules and preserves it on valid candidates (0.107625ms)
+✔ runOpportunityEngine stores counterparty and derives pursuable deterministically (4.236959ms)
+✔ listOpportunities sorts pursuable first and treats a missing pursuable field as false (2.935083ms)
+✔ boss-only prospect run produces one Opportunity, one completion, and never touches the second provider (1.228833ms)
+✔ boss-requested second opinion uses only the next provider, settles the reservation, and creates two Opportunities (2.352041ms)
+✔ budget exhaustion skips the elective second opinion and records role.provider.skipped (1.591333ms)
+✔ boss failure falls back to the next provider without any budget reservation (1.341541ms)
+✔ fallback continues through the full provider list until one provider succeeds (1.490125ms)
+✔ a boss request for a second opinion reaches at most the next provider in the list (1.384625ms)
+✔ scoreOpportunity is a deterministic, documented combination of confidence/evidence/recency/type weight (0.075791ms)
+✔ runDiscoveryPass processes each research topic independently and tolerates a per-topic failure (10.2735ms)
+✔ opportunity engine grounds candidates in real knowledge-base evidence with correct causation/correlation (25.375708ms)
+✔ opportunities list and show CLI commands render pursuable-first rows, filters, counterparty data, and missing-field fallback (347.732167ms)
+✔ opportunities show reports a clear error for an unknown id (61.461458ms)
+✔ instance config validation accepts researchTopics/scoring and rejects malformed values (0.173208ms)
+✔ futco instance config declares the opportunity.prospect role and real research topics (0.213416ms)
+Proposal 31ed6790-47b2-48ab-a726-d049dfc2f259 must be approved before confirmAndExecute (status: pending)
+Proposal 31ed6790-47b2-48ab-a726-d049dfc2f259: approved
+Proposal 31ed6790-47b2-48ab-a726-d049dfc2f259: confirmed, action executed
+Proposal aa1d8d5b-82c1-4089-86be-bfe687399650: approved (action executed immediately)
+Proposal aa1d8d5b-82c1-4089-86be-bfe687399650 is authority level 2; level-2 actions already execute on approval and do not use confirmAndExecute
+✔ authority policy: known action types map to documented levels; unknown types fail closed (0.556875ms)
+✔ assertProposalAuthorized refuses a pending proposal and passes an approved one at the matching type/level (11.022917ms)
+✔ createProposal derives authorityLevel from the policy table and rejects malformed input without a partial write (1.033416ms)
+✔ decideOpportunity requires a reason, rejects unknown decisions, and appends opportunity.reviewed with via recorded (1.140458ms)
+✔ level-2 proposal: approval and execution are the same call; a pending proposal refuses the action directly (1.743167ms)
+✔ level-3/4 proposals require the separate confirmAndExecute step and do not fire on approval alone (6.441541ms)
+✔ rejecting a proposal never executes its action, at any level (1.256417ms)
+✔ full causal chain from originating event through opportunity.reviewed and proposal.created -> proposal.approved is reconstructable via correlationId, with via recorded (2.07675ms)
+✔ authorityNotify is best-effort: absent config, and a failing command, never throw or block proposal creation (1.863916ms)
+✔ CLI: a hand-crafted proposal at each authority level can be approved or rejected via the CLI wrapper (357.938792ms)
+✔ CLI: opportunities decide transitions status and requires --status and --reason (188.72075ms)
+✔ CLI: `proposals confirm` is the level-3/4 second step, and refuses what confirmAndExecute refuses (123.16625ms)
+✔ web server refuses to start with no auth env vars configured, naming the missing credential (2.639834ms)
+✔ startWebServer throws the same way, before ever listening, when credentials are missing (0.236084ms)
+✔ GET /opportunities/:id renders a causal chain identical in content to `opportunities show` (86.761875ms)
+✔ GET /opportunities and /opportunities/:id render pursuable state and counterparty details for current and historical records (3.269458ms)
+✔ approving a level-2 proposal via the web form fires the action exactly once and records via: "web" (3.551292ms)
+✔ single-step approve on a level-3/4 proposal via the web form does not fire the action without confirm (2.832083ms)
+✔ a CSRF-forged POST (no valid same-site cookie) to a mutating route is rejected and never mutates state (1.407709ms)
+✔ requests without valid basic auth are rejected with 401 (0.430625ms)
+✔ communicator produces a correctly-structured outreach draft and a pending send-outreach Proposal, never a directly-sent message (6.21275ms)
+✔ multi-provider communicator produces grouped sibling drafts with shared correlationId and provider attribution (154.951959ms)
+✔ communicator refuses to draft outreach for an opportunity that is not "pursuing" (1.512167ms)
+✔ malformed role output (invalid JSON, or missing required fields) is rejected and appends no proposal.created event (1.789333ms)
+✔ parseDraftJson strips a markdown fence; validateOutreachDraft rejects a missing field (0.08625ms)
+✔ deriveRecipient prefers a lead email from the evidence chain, falls back to outreach.fallbackToEmail, and refuses when neither is available (0.501541ms)
+✔ communicator refuses to draft outreach when no recipient can be derived (0.872833ms)
+✔ sendOutreach refuses a pending or rejected proposal, and refuses a proposal missing to/subject/body (0.771291ms)
+✔ sendOutreach against an approved proposal sends via the injected transport and emits outreach.sent with correct causationId/correlationId (1.165292ms)
+✔ approving one sibling outreach proposal blocks later approval of the other before any second approval event is appended (1.920458ms)
+✔ concurrent approval of sibling outreach proposals results in one success, one refusal, and one outreach.sent event (34.337334ms)
+✔ level-2 send-outreach proposal: approving via decideProposal fires sendOutreach exactly once, and /actions lists it with links back to proposal and opportunity (1.718708ms)
+✔ CLI: pursue reports cleanly when there are no pursuing opportunities (67.482375ms)
+✔ writeHandoffArtifact appends research_topics (idempotently) and writes an audit file (1.651625ms)
+✔ writeHandoffArtifact refuses when the target repo has no .e3d-pilot/config.json (0.329459ms)
+✔ proposePilotHandoff requires a "pursuing" opportunity and derives authorityLevel 2 from the policy table (3.454ms)
+✔ pilotHandoff refuses a non-approved proposal, and against an approved one writes the artifact and emits pilot-handoff.created (3.346417ms)
+✔ checkCapabilityShipped appends capability.shipped for a plausibly-related repo, and reports no match without a false event (1.734708ms)
+✔ checkCapabilityShipped refuses when no pilot-handoff.created event exists yet for the opportunity (1.04425ms)
+✔ a hand-crafted product-opportunity marked pursuing: proposing and approving a pilot-handoff via the web UI produces a well-formed artifact and pilot-handoff.created with correct correlationId (9.873833ms)
+✔ OUTCOME_TYPES includes the spec-documented starter list, distinguishable from Phase 5 Decision event types (0.40875ms)
+✔ recordOutcome requires a real chain and a known type, and appends an outcome event plus an experience.jsonl snapshot (5.701417ms)
+✔ listOutcomes folds recorded outcome events from the log (2.549208ms)
+✔ assembleExperience against a full fixture chain (event -> opportunity -> proposal -> decision -> action -> outcome) produces a complete record with no missing required field (2.632416ms)
+✔ assembleExperience on a bare chain (just a trigger event, nothing else) still returns every field, with unpopulated fields explicitly null (0.497834ms)
+✔ outcomes record against a real chain from Phase 7 (a sent outreach) correctly appends an outcome event, reflected in reconstructChain regardless of which surface recorded it (92.403084ms)
+✔ CLI: experience show renders a full experience record (70.796541ms)
+✔ normalizeVendorId trims and lowercases vendor ids (0.395167ms)
+✔ parseAssessmentJson accepts bare JSON and fenced JSON (0.515625ms)
+✔ parseAssessmentJson rejects empty and malformed JSON (0.178292ms)
+✔ normalizeAssessment accepts and normalizes all supported verdicts, including empty arrays (0.178709ms)
+✔ normalizeAssessment rejects extra keys, invalid verdicts, missing fields, blank risk factors, duplicate evidence ids, and fabricated ids (0.123917ms)
+✔ selectVendorHistory matches exact normalized vendor ids via subject.id and payload.vendorId, excludes the request and unrelated vendors, and keeps newest first (1.149459ms)
+✔ selectVendorHistory treats same-occurredAt earlier log entries as prior history, bounds to 20 newest matches, and returns empty history when nothing matches (0.202125ms)
+✔ authority policy maps flag-payment-request to level 3 (0.065625ms)
+✔ runRiskAssess turns a stored payment request into exactly one pending flag-payment-request proposal for HOLD, APPROVE, and CHECK without any decision or action events (5.302708ms)
+✔ runRiskAssess sends only bounded vendor-relevant history and the exact allowed evidence ids to the role (7.716334ms)
+✔ invalid or ungrounded role output leaves the stored request event in place and creates no proposal (0.646583ms)
+✔ runRiskAssess attributes provider and model from configuration, not from response metadata (0.627042ms)
+✔ missing roles.risk.assess config throws before any provider call (0.415583ms)
+✔ e3d-trade outcome webhook records an Outcome and Experience idempotently for a submitted mandate chain (7.329583ms)
+✔ e3d-trade outcome webhook rejects invalid auth and outcome-id conflicts (2.282375ms)
+ℹ tests 152
+ℹ suites 0
+ℹ pass 152
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 959.076709
+Status: phase 2 completed.
+== Phase 3: CLI command and example config ==
+Provider: codex
+Model: gpt-5.4
+Status: starting Codex phase run.
+**Phase 3**
+
+Implemented the `request submit` CLI path and the example `risk.assess` config. The command now validates all required/optional flags before `loadInstance()` or any event write, appends one normalized `payment-request.received` event, awaits `runRiskAssess(...)`, and prints a concise success line with request event id, verdict, proposal id, pending status, and authority level. Bare or unknown `request` subcommands now print help and return nonzero, and generic `event add` behavior was left unchanged.
+
+Focused Phase 3 coverage was added in `test/riskAssess.test.js` for CLI help, invalid input, end-to-end submission, request-group routing, and confirming there is still no `flag-payment-request` action executor. The handoff is in [.codex-spec-runner/summaries/phase-3.md](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918102643.dhBOID/.codex-spec-runner/summaries/phase-3.md).
+
+**Verification**
+
+Passed:
+- `npm install`
+- `node --check bin/e3d-corp`
+- `node --test --test-skip-pattern='real knowledge-base results|records evidence for the repo lookup|real integration returns real repos' $(find test -name '*.test.js' ! -name 'e3dTradeAcceptance.test.js')`
+- `node --test test/riskAssess.test.js`
+
+`npm run check` still fails, but only for pre-existing unrelated suite issues:
+- missing external module for `test/e3dTradeAcceptance.test.js`
+- real knowledge-base integration tests in `test/phase3.test.js` and `test/phase8.test.js` returning `unavailable` instead of `ok`
+Provider tokens: 123447 (ceiling: 120000)
+Status: phase 3 failed with exit status 75.

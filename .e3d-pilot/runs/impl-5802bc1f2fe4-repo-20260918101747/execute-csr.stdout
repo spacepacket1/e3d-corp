@@ -1,0 +1,279 @@
+ok: spec file exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T//e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/.e3d-pilot/runs/impl-5802bc1f2fe4-repo-20260918101747/spec-final.md
+ok: root directory exists: /var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY
+ok: --from phase is numeric: 1
+ok: --to phase is numeric: 3
+ok: selected 3 phase(s) for target all
+ok: verification shell found on PATH: bash
+ok: Codex binary found on PATH: codex
+result: ok
+== Phase 1: Vendor history selection and assessment validation (pure helpers) ==
+Provider: codex
+Model: gpt-5.4
+Status: starting Codex phase run.
+Implemented Phase 1 only.
+
+The phase scope is complete in [lib/authority/policy.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/lib/authority/policy.js), [lib/roles/riskAssess.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/lib/roles/riskAssess.js), [test/riskAssess.test.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/riskAssess.test.js), and the single stale assertion in [test/phase5.test.js](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/phase5.test.js). `flag-payment-request` now resolves to authority level 3, the policy version is `v3`, and the new `riskAssess` module exports only the pure helpers required for this phase: vendor ID normalization, vendor-history selection, markdown-fence JSON parsing, and strict assessment normalization/validation. I also wrote the required handoff to [.codex-spec-runner/summaries/phase-1.md](/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/.codex-spec-runner/summaries/phase-1.md).
+
+Verification on the Phase 1 surface passed: `node --test test/riskAssess.test.js`, `node --test test/phase5.test.js`, `node --check lib/roles/riskAssess.js`, and `npm install`. `npm run check` does not pass in this workspace, but the failures are outside this phase and pre-existing: missing `@aws-sdk/client-ses` / `@smithy/core` runtime deps in existing CLI paths, a missing `/tmp/e3d-trade/scripts/capitalMandates.js` module, and existing real-integration tests that expect unavailable external services.
+Provider tokens: 64905 (ceiling: 120000)
+Verification: running npm install && npm run check
+
+up to date, audited 25 packages in 278ms
+
+found 0 vulnerabilities
+
+> e3d-corp@0.1.0 check
+> node --check bin/e3d-corp && node --test
+
+✔ capital_mandate action refuses an unapproved proposal before contacting e3d-trade (6.427417ms)
+✔ confirming an approved capital_mandate submits active payload and records activation only after accepted ack (4.751417ms)
+✔ unconfirmed e3d-trade acknowledgement leaves mandate approved, not active (3.002917ms)
+✔ duplicate confirm of the same mandate is idempotent in e3d-corp and does not resubmit (3.173834ms)
+✔ trade client retries timeout/5xx safely and surfaces conflicts without retrying (313.735709ms)
+✔ capital_mandate schema validates the full lifecycle field set and deterministic mandate id (2.807042ms)
+✔ capital_mandate lifecycle accepts only the declared forward path (0.358458ms)
+✔ capital_mandate constraints reject relaxation, override, bypass, and live-execution signals (0.315666ms)
+✔ capital_mandate proposal uses the existing human-gated Proposal and Decision pipeline (3.137375ms)
+✔ createProposal rejects malformed capital_mandate payloads without a partial write (0.617542ms)
+node:internal/modules/esm/resolve:272
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-trade/scripts/capitalMandates.js' imported from /private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/e3dTradeAcceptance.test.js
+    at finalizeResolution (node:internal/modules/esm/resolve:272:11)
+    at moduleResolve (node:internal/modules/esm/resolve:879:10)
+    at defaultResolve (node:internal/modules/esm/resolve:1006:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:708:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:728:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:766:56)
+    at #resolve (node:internal/modules/esm/loader:690:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:610:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:277:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:389:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-trade/scripts/capitalMandates.js'
+}
+
+Node.js v26.7.0
+✖ test/e3dTradeAcceptance.test.js (38.423833ms)
+✔ Phase 8 readiness report exists and covers the required readiness conclusions (2.014709ms)
+✔ buildPrompt separates E3D theses, stories, and market state for the investing role (0.915458ms)
+✔ runInvestingOpportunityScorer returns a normalized investment candidate and provider telemetry without mutating opportunity state (3.646792ms)
+✔ invented thesis or story references are rejected and recorded as a provider failure (1.321833ms)
+✔ parseCandidateJson and investing schema reject malformed or incomplete role output (0.125292ms)
+✔ validateInstanceConfig accepts the example config (1.007875ms)
+✔ cli config validate passes for the example config (86.737625ms)
+✔ cli config validate fails clearly for a missing file (82.5995ms)
+✔ cli config validate accepts the futco instance config (70.301667ms)
+✔ help output documents provider status and later-phase commands (68.098458ms)
+✔ legacy flat llm config fails validation with an explicit llm.providers migration error (0.187291ms)
+✔ unknown role provider fails validation with a role-specific error (0.096875ms)
+✔ providers status reports missing Grok binary and missing hosted API key without making a call (68.847458ms)
+✔ resolveProvider returns grok-cli-default when no model env var is configured (0.519625ms)
+✔ resolveProvider names the missing env var for hosted providers (0.149ms)
+✔ local HTTP provider aborts on timeout instead of hanging (51.947042ms)
+✔ local HTTP provider returns text plus normalized usage (0.28275ms)
+✔ grok CLI provider kills the subprocess on timeout (54.443208ms)
+✔ grok CLI provider parses JSON output into text, usage, and cost (200.316334ms)
+✔ grok CLI provider treats malformed JSON output as a call failure (122.415083ms)
+✔ futco instance directory placeholder exists (0.153417ms)
+✔ example and futco configs use the provider registry shape (0.164292ms)
+✔ computeMetrics against a fixture with a known mix of outcomes matches hand-computed expected values for every metric (11.207ms)
+✔ computeMetrics --since filters out opportunities/events before the cutoff (9.341709ms)
+✔ formatMetricsReport renders human-readable rates and honestly reports "no data" rather than a fabricated 0%/number (0.892292ms)
+✔ CLI: evaluate report renders the same fixture metrics as computeMetrics (102.149833ms)
+✔ web /metrics renders the same fixture metrics as computeMetrics (7.441458ms)
+✔ computeMetrics includes the same budget status objects computeBudgetStatus returns directly (7.169958ms)
+✔ Phase 10 real-data bar: evaluate report against real (even sparse) FutCo data produces a real, non-fabricated report (204.168ms)
+✔ appendEvent generates id/occurredAt when absent and persists the record (6.265042ms)
+✔ appendEvent rejects an event missing required fields (0.481042ms)
+✔ appendEvent rejects a causationId that does not resolve to an existing event (0.323ms)
+✔ appendEvent accepts a causationId pointing at a real prior event (0.910708ms)
+✔ queryEvents filters by type, correlationId, and since (0.892875ms)
+✔ validateInstanceConfig accepts llm.budget and rejects unsupported period or unknown budget providers (0.392958ms)
+✔ computeBudgetStatus reports settled spend, outstanding reservations, non-negative remaining, and UTC day boundaries (2.002584ms)
+✔ reserveBudget is lock-safe under concurrency and unlimited providers always grant (18.888958ms)
+✔ settleReservation records the settled provider event and budget status reflects the settled tokens (1.86275ms)
+✔ CLI: budget status renders computeBudgetStatus numbers for configured providers (84.677459ms)
+✔ reconstructChain returns a hand-crafted 4-event chain in correct causal order (1.681625ms)
+✔ reconstructChain orders events by occurredAt regardless of append order (1.569875ms)
+✔ event add generates a fresh correlationId; a second add with --correlation links to the same chain (214.4595ms)
+✔ event add rejects invalid --payload JSON with a clear error (64.14925ms)
+✔ event add surfaces a causationId validation error through the CLI (63.695375ms)
+✔ concurrent event add invocations do not corrupt events.jsonl (172.723833ms)
+✔ appendEvent links each record to the one before it, and the chain verifies (0.981542ms)
+✔ verifyEventChain names the first altered record, and reports what a chain alone cannot catch (1.159167ms)
+✔ adopting chaining on an existing unchained log seals the legacy prefix rather than rewriting it (0.694709ms)
+✔ publishAnchor records the head and count, and the anchor event agrees with the chain (0.894ms)
+✔ an anchor catches a full rewrite and a truncated tail — the two failures the chain alone cannot see (1.014125ms)
+✔ only an externally held anchor catches truncation — in-log anchors structurally cannot (0.914125ms)
+✔ anchor email config fails closed, and the body carries no business content (0.187875ms)
+✔ CLI: event verify reports an intact chain and exits non-zero on a broken one (241.628959ms)
+✔ futco instance config declares the e3d-applied lead-capture source (0.734459ms)
+✖ research adapter returns real knowledge-base results and appends evidence (17.369875ms)
+✖ research adapter parses repo info and records evidence for the repo lookup (4.66475ms)
+✔ web search uses the configured provider and appends evidence (1.9525ms)
+✔ web search includes the configured API key from the referenced env var (1.251584ms)
+✔ research adapter returns documented unavailable results when providers are unreachable (1.569667ms)
+✔ recordLeadReceived creates lead.received with a fresh correlationId (0.657083ms)
+✔ runOpportunityEngine produces a correctly-typed opportunity and a traceable event chain from a stubbed LLM (10.73875ms)
+✔ malformed role output (invalid JSON) is rejected and appends no opportunity.created event (1.444292ms)
+✔ malformed role output (missing required fields) is rejected and appends no opportunity.created event (1.079834ms)
+✔ parseCandidateJson strips a markdown fence but still rejects genuinely broken JSON (0.117208ms)
+✔ buildPrompt excludes own-domain evidence results before truncation and leaves non-URL items untouched (0.253375ms)
+✔ buildPrompt leaves evidence unchanged when ownDomains is omitted or empty and the prompt requires counterparty honesty (0.169959ms)
+✔ normalizeOpportunityCandidate enforces counterparty rules and preserves it on valid candidates (0.1135ms)
+✔ runOpportunityEngine stores counterparty and derives pursuable deterministically (4.816541ms)
+✔ listOpportunities sorts pursuable first and treats a missing pursuable field as false (4.606917ms)
+✔ boss-only prospect run produces one Opportunity, one completion, and never touches the second provider (1.421209ms)
+✔ boss-requested second opinion uses only the next provider, settles the reservation, and creates two Opportunities (4.10225ms)
+✔ budget exhaustion skips the elective second opinion and records role.provider.skipped (4.899416ms)
+✔ boss failure falls back to the next provider without any budget reservation (1.927334ms)
+✔ fallback continues through the full provider list until one provider succeeds (1.591ms)
+✔ a boss request for a second opinion reaches at most the next provider in the list (1.850166ms)
+✔ scoreOpportunity is a deterministic, documented combination of confidence/evidence/recency/type weight (0.109708ms)
+✔ runDiscoveryPass processes each research topic independently and tolerates a per-topic failure (2.596083ms)
+✔ opportunity engine grounds candidates in real knowledge-base evidence with correct causation/correlation (19.200708ms)
+✔ opportunities list and show CLI commands render pursuable-first rows, filters, counterparty data, and missing-field fallback (358.963083ms)
+✔ opportunities show reports a clear error for an unknown id (64.784167ms)
+✔ instance config validation accepts researchTopics/scoring and rejects malformed values (0.179792ms)
+✔ futco instance config declares the opportunity.prospect role and real research topics (0.178166ms)
+Proposal 29d5c959-022c-4fb3-a7c8-cd183ffa6dfd must be approved before confirmAndExecute (status: pending)
+Proposal 29d5c959-022c-4fb3-a7c8-cd183ffa6dfd: approved
+Proposal 29d5c959-022c-4fb3-a7c8-cd183ffa6dfd: confirmed, action executed
+Proposal da90c828-4ea2-4af0-bddc-df6f27a5341f: approved (action executed immediately)
+Proposal da90c828-4ea2-4af0-bddc-df6f27a5341f is authority level 2; level-2 actions already execute on approval and do not use confirmAndExecute
+✔ authority policy: known action types map to documented levels; unknown types fail closed (0.532291ms)
+✔ assertProposalAuthorized refuses a pending proposal and passes an approved one at the matching type/level (2.923291ms)
+✔ createProposal derives authorityLevel from the policy table and rejects malformed input without a partial write (0.883625ms)
+✔ decideOpportunity requires a reason, rejects unknown decisions, and appends opportunity.reviewed with via recorded (1.11475ms)
+✔ level-2 proposal: approval and execution are the same call; a pending proposal refuses the action directly (2.099333ms)
+✔ level-3/4 proposals require the separate confirmAndExecute step and do not fire on approval alone (4.092083ms)
+✔ rejecting a proposal never executes its action, at any level (1.110792ms)
+✔ full causal chain from originating event through opportunity.reviewed and proposal.created -> proposal.approved is reconstructable via correlationId, with via recorded (1.541541ms)
+✔ authorityNotify is best-effort: absent config, and a failing command, never throw or block proposal creation (3.419916ms)
+✔ CLI: a hand-crafted proposal at each authority level can be approved or rejected via the CLI wrapper (361.807958ms)
+✔ CLI: opportunities decide transitions status and requires --status and --reason (191.350417ms)
+✔ CLI: `proposals confirm` is the level-3/4 second step, and refuses what confirmAndExecute refuses (124.134292ms)
+✔ web server refuses to start with no auth env vars configured, naming the missing credential (2.388708ms)
+✔ startWebServer throws the same way, before ever listening, when credentials are missing (0.305458ms)
+✔ GET /opportunities/:id renders a causal chain identical in content to `opportunities show` (92.207166ms)
+✔ GET /opportunities and /opportunities/:id render pursuable state and counterparty details for current and historical records (4.386542ms)
+✔ approving a level-2 proposal via the web form fires the action exactly once and records via: "web" (5.076375ms)
+✔ single-step approve on a level-3/4 proposal via the web form does not fire the action without confirm (3.191958ms)
+✔ a CSRF-forged POST (no valid same-site cookie) to a mutating route is rejected and never mutates state (1.821916ms)
+✔ requests without valid basic auth are rejected with 401 (0.434167ms)
+✔ communicator produces a correctly-structured outreach draft and a pending send-outreach Proposal, never a directly-sent message (6.531666ms)
+✔ multi-provider communicator produces grouped sibling drafts with shared correlationId and provider attribution (162.655667ms)
+✔ communicator refuses to draft outreach for an opportunity that is not "pursuing" (1.6485ms)
+✔ malformed role output (invalid JSON, or missing required fields) is rejected and appends no proposal.created event (2.604167ms)
+✔ parseDraftJson strips a markdown fence; validateOutreachDraft rejects a missing field (0.094625ms)
+✔ deriveRecipient prefers a lead email from the evidence chain, falls back to outreach.fallbackToEmail, and refuses when neither is available (0.068125ms)
+✔ communicator refuses to draft outreach when no recipient can be derived (0.618417ms)
+✔ sendOutreach refuses a pending or rejected proposal, and refuses a proposal missing to/subject/body (0.719709ms)
+✔ sendOutreach against an approved proposal sends via the injected transport and emits outreach.sent with correct causationId/correlationId (1.02ms)
+✔ approving one sibling outreach proposal blocks later approval of the other before any second approval event is appended (2.00325ms)
+✔ concurrent approval of sibling outreach proposals results in one success, one refusal, and one outreach.sent event (34.226917ms)
+✔ level-2 send-outreach proposal: approving via decideProposal fires sendOutreach exactly once, and /actions lists it with links back to proposal and opportunity (1.982416ms)
+✔ CLI: pursue reports cleanly when there are no pursuing opportunities (71.365791ms)
+✔ writeHandoffArtifact appends research_topics (idempotently) and writes an audit file (3.079042ms)
+✔ writeHandoffArtifact refuses when the target repo has no .e3d-pilot/config.json (0.347959ms)
+✔ proposePilotHandoff requires a "pursuing" opportunity and derives authorityLevel 2 from the policy table (2.911958ms)
+✔ pilotHandoff refuses a non-approved proposal, and against an approved one writes the artifact and emits pilot-handoff.created (3.495083ms)
+✔ checkCapabilityShipped appends capability.shipped for a plausibly-related repo, and reports no match without a false event (2.159291ms)
+✔ checkCapabilityShipped refuses when no pilot-handoff.created event exists yet for the opportunity (1.411375ms)
+✖ knowledge-base listRepos: real integration returns real repos and records evidence (8.7345ms)
+✔ a hand-crafted product-opportunity marked pursuing: proposing and approving a pilot-handoff via the web UI produces a well-formed artifact and pilot-handoff.created with correct correlationId (9.4135ms)
+✔ OUTCOME_TYPES includes the spec-documented starter list, distinguishable from Phase 5 Decision event types (0.398834ms)
+✔ recordOutcome requires a real chain and a known type, and appends an outcome event plus an experience.jsonl snapshot (7.709042ms)
+✔ listOutcomes folds recorded outcome events from the log (3.377125ms)
+✔ assembleExperience against a full fixture chain (event -> opportunity -> proposal -> decision -> action -> outcome) produces a complete record with no missing required field (4.728708ms)
+✔ assembleExperience on a bare chain (just a trigger event, nothing else) still returns every field, with unpopulated fields explicitly null (0.534833ms)
+✔ outcomes record against a real chain from Phase 7 (a sent outreach) correctly appends an outcome event, reflected in reconstructChain regardless of which surface recorded it (92.464916ms)
+✔ CLI: experience show renders a full experience record (72.352292ms)
+✔ normalizeVendorId trims surrounding whitespace and lowercases the value (1.410667ms)
+✔ parseAssessmentJson strips a wrapping markdown fence before parsing JSON (0.282666ms)
+✔ parseAssessmentJson rejects empty output and malformed JSON (0.24475ms)
+✔ normalizeAssessment accepts and normalizes HOLD, APPROVE, and CHECK verdicts (0.693541ms)
+✔ normalizeAssessment rejects extra keys, invalid verdicts, missing fields, blank risk factors, duplicate citations, and fabricated evidence IDs (0.193541ms)
+✔ selectVendorHistory matches prior events by normalized subject.id and payload.vendorId, excluding unrelated vendors and the request itself (0.198666ms)
+✔ selectVendorHistory uses same-occurredAt log order for predating and returns newest first with a 20-event bound (0.174292ms)
+✔ selectVendorHistory returns an empty array when there is no prior matching vendor history (0.054541ms)
+✔ flag-payment-request resolves to financial authority level 3 (0.083291ms)
+✔ e3d-trade outcome webhook records an Outcome and Experience idempotently for a submitted mandate chain (7.42075ms)
+✔ e3d-trade outcome webhook rejects invalid auth and outcome-id conflicts (1.830208ms)
+ℹ tests 152
+ℹ suites 0
+ℹ pass 148
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 988.194458
+
+✖ failing tests:
+
+test at test/e3dTradeAcceptance.test.js:1:1
+✖ test/e3dTradeAcceptance.test.js (38.423833ms)
+  'test failed'
+
+test at test/phase3.test.js:66:1
+✖ research adapter returns real knowledge-base results and appends evidence (17.369875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/phase3.test.js:89:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/phase3.test.js:108:1
+✖ research adapter parses repo info and records evidence for the repo lookup (4.66475ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/phase3.test.js:131:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at test/phase8.test.js:358:1
+✖ knowledge-base listRepos: real integration returns real repos and records evidence (8.7345ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'unavailable'
+  - 'ok'
+  
+      at TestContext.<anonymous> (file:///private/var/folders/vn/jrwn6x0579v_26grcpvwp_200000gn/T/e3d-pilot.impl-5802bc1f2fe4-repo-20260918101747.VMU0eY/test/phase8.test.js:374:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1404:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:969:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'unavailable',
+    expected: 'ok',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+Status: phase 1 failed with exit status 1.
