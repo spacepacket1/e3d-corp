@@ -25,6 +25,9 @@
     },
     "opportunity.communicator": {
       "provider": "local"
+    },
+    "risk.assess": {
+      "provider": "local"
     }
   },
   "outreach": {
