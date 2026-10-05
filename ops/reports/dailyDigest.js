@@ -6,10 +6,30 @@
 // Sends both an HTML (tables) and plain-text version of the same content.
 
 import { loadInstance } from '../../lib/config.js';
+import { queryEvents } from '../../lib/events/store.js';
 import { listOpportunities } from '../../lib/opportunities/store.js';
 import { listProposals } from '../../lib/proposals/store.js';
 import { computeMetrics } from '../../lib/evaluation/metrics.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
+
+// A degraded evidence pull (bad token, disabled feed, API outage) otherwise
+// fails silently into a cron log nobody's watching - one entry per source,
+// most recent first, so a stuck credential surfaces here within a day
+// instead of being noticed only when someone goes looking at *-poll.log.
+function listDegradedEvidence(dataDir, since) {
+  const degraded = queryEvents(dataDir, { type: 'evidence.gathered', since }).filter(
+    (event) => event.payload?.degraded === true
+  );
+  const latestBySource = new Map();
+  for (const event of degraded) {
+    latestBySource.set(event.source, event);
+  }
+  return [...latestBySource.values()].sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+}
+
+function degradedReason(event) {
+  return event.payload?.result?.reason ?? event.payload?.resultSummary ?? 'unavailable';
+}
 
 const DIGEST_RECIPIENT_ENV_VAR = 'FUTCO_DIGEST_TO_EMAIL';
 
@@ -48,10 +68,18 @@ function formatProposalTextEntry(proposal, index) {
   ].join('\n');
 }
 
-function buildTextBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics }) {
+function buildTextBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence }) {
   const lines = [];
   lines.push(`FutCo daily digest - ${instanceName} - ${dateLabel}`);
   lines.push('');
+
+  if (degradedEvidence.length > 0) {
+    lines.push(...section('DEGRADED EVIDENCE PULLS - check the credential/feed', degradedEvidence.length));
+    lines.push(
+      degradedEvidence.map((event, index) => `${index + 1}. ${event.source}: ${degradedReason(event)}`).join('\n')
+    );
+    lines.push('');
+  }
 
   lines.push(...section('NEW OPPORTUNITIES', newOpportunities.length));
   lines.push(
@@ -152,6 +180,18 @@ function proposalsTableHtml(pendingProposals) {
   return table(['Level', 'Title', 'Type', 'Proposed by', 'ID'], rows);
 }
 
+function degradedEvidenceTableHtml(degradedEvidence) {
+  if (degradedEvidence.length === 0) {
+    return `<p style="${EMPTY}">None in the last day.</p>`;
+  }
+  const rows = degradedEvidence.map((event) => [
+    `<td style="${TD}"><strong>${escapeHtml(event.source)}</strong></td>`,
+    `<td style="${TD}">${escapeHtml(degradedReason(event))}</td>`,
+    `<td style="${TD_ID}">${escapeHtml(event.occurredAt)}</td>`
+  ]);
+  return table(['Source', 'Reason', 'Last seen'], rows);
+}
+
 function metricsSummaryTableHtml(metrics) {
   const rows = [
     ['Opportunities discovered', metrics.opportunitiesDiscovered.total],
@@ -194,11 +234,18 @@ function metricsByTypeTableHtml(metrics) {
   );
 }
 
-function buildHtmlBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics }) {
+function buildHtmlBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence }) {
+  const degradedSectionHtml =
+    degradedEvidence.length > 0
+      ? `
+  <h2 style="${H2}color:#b42318;">&#9888; Degraded evidence pulls (${degradedEvidence.length})</h2>
+  ${degradedEvidenceTableHtml(degradedEvidence)}`
+      : '';
+
   return `
 <div style="${FONT}max-width:680px;margin:0 auto;color:#1a1a1a;">
   <h1 style="${FONT}font-size:19px;margin:0 0 20px;">FutCo daily digest &mdash; ${escapeHtml(instanceName)} &mdash; ${escapeHtml(dateLabel)}</h1>
-
+${degradedSectionHtml}
   <h2 style="${H2}">New opportunities (${newOpportunities.length})</h2>
   ${opportunitiesTableHtml(newOpportunities)}
 
@@ -237,15 +284,17 @@ async function main() {
     .filter((opportunity) => opportunity.status !== 'no-value')
     .sort((a, b) => (b.score?.value ?? -Infinity) - (a.score?.value ?? -Infinity));
   const pendingProposals = listProposals(dataDir, { status: 'pending' });
+  const degradedEvidence = listDegradedEvidence(dataDir, since);
   const metrics = computeMetrics(dataDir);
 
   const now = new Date();
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-  const context = { instanceName, dateLabel, newOpportunities, pendingProposals, metrics };
+  const context = { instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence };
   const body = buildTextBody(context);
   const htmlBody = buildHtmlBody(context);
-  const subject = `FutCo daily digest — ${newOpportunities.length} new, ${pendingProposals.length} pending — ${now.toISOString().slice(0, 10)}`;
+  const degradedSuffix = degradedEvidence.length > 0 ? `, ${degradedEvidence.length} evidence pull(s) degraded` : '';
+  const subject = `FutCo daily digest — ${newOpportunities.length} new, ${pendingProposals.length} pending${degradedSuffix} — ${now.toISOString().slice(0, 10)}`;
 
   const result = await sendEmailViaSes({ instanceConfig: config, to, subject, body, htmlBody });
   process.stdout.write(`Sent daily digest to ${to} (messageId=${result.messageId})\n`);

@@ -113,6 +113,10 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 500
+            },
+            "opportunitySignalFitTiers": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
             }
           },
           "additionalProperties": false
