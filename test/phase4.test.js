@@ -14,7 +14,12 @@ import { runOpportunityEngine, runDiscoveryPass } from '../lib/opportunities/eng
 import { normalizeOpportunityCandidate } from '../lib/opportunities/schema.js';
 import { listOpportunities, getOpportunity } from '../lib/opportunities/store.js';
 import { scoreOpportunity, recencyFactor } from '../lib/opportunities/scoring.js';
-import { buildPrompt, parseCandidateJson } from '../lib/roles/opportunityProspect.js';
+import {
+  buildPrompt,
+  parseCandidateJson,
+  callWithTransientRetry,
+  isTransientProviderError
+} from '../lib/roles/opportunityProspect.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BIN = path.join(ROOT, 'bin', 'e3d-corp');
@@ -1233,4 +1238,68 @@ test('futco instance config declares the opportunity.prospect role and real rese
   const config = loadInstanceConfig(path.join(ROOT, '.e3d-corp', 'instance', 'futco', 'instance.json'));
   assert.deepEqual(config.roles['opportunity.prospect'], { provider: 'local' });
   assert.ok(Array.isArray(config.researchTopics) && config.researchTopics.length > 0);
+});
+
+test('isTransientProviderError recognizes contention/queue errors, not model-output errors', () => {
+  assert.ok(isTransientProviderError(new Error('LLM endpoint returned HTTP 503')));
+  assert.ok(isTransientProviderError(new Error('LLM endpoint returned HTTP 502')));
+  assert.ok(isTransientProviderError(new Error('LLM endpoint returned HTTP 429')));
+  assert.ok(isTransientProviderError(new Error('LLM request timed out after 300000ms')));
+  assert.equal(isTransientProviderError(new Error('LLM endpoint returned HTTP 400')), false);
+  assert.equal(
+    isTransientProviderError(new Error('Invalid opportunity candidate:\n- counterparty.name: must be null')),
+    false
+  );
+  assert.equal(isTransientProviderError(undefined), false);
+});
+
+test('callWithTransientRetry retries a transient failure and returns the eventual success', async () => {
+  let calls = 0;
+  const result = await callWithTransientRetry(
+    async () => {
+      calls += 1;
+      if (calls < 3) {
+        throw new Error('LLM endpoint returned HTTP 503');
+      }
+      return 'ok';
+    },
+    {},
+    { backoffMs: 1 }
+  );
+  assert.equal(result, 'ok');
+  assert.equal(calls, 3);
+});
+
+test('callWithTransientRetry gives up after maxRetries on a persistent transient failure', async () => {
+  let calls = 0;
+  await assert.rejects(
+    () =>
+      callWithTransientRetry(
+        async () => {
+          calls += 1;
+          throw new Error('LLM request timed out after 300000ms');
+        },
+        {},
+        { maxRetries: 2, backoffMs: 1 }
+      ),
+    /timed out/
+  );
+  assert.equal(calls, 3); // initial attempt + 2 retries
+});
+
+test('callWithTransientRetry never retries a non-transient (model-output) error', async () => {
+  let calls = 0;
+  await assert.rejects(
+    () =>
+      callWithTransientRetry(
+        async () => {
+          calls += 1;
+          throw new Error('Invalid opportunity candidate:\n- counterparty.name: must be null');
+        },
+        {},
+        { backoffMs: 1 }
+      ),
+    /Invalid opportunity candidate/
+  );
+  assert.equal(calls, 1);
 });
