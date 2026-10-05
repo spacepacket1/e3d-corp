@@ -96,6 +96,100 @@
         "webSearchApiKeyEnvVar": {
           "type": "string",
           "minLength": 1
+        },
+        "oppscanFeed": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tokenEnvVar": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          "additionalProperties": false
+        },
+        "ga4": {
+          "type": "object",
+          "required": ["properties"],
+          "properties": {
+            "credentialsEnvVar": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lookbackDays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dimensions": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "metrics": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "properties": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["key", "propertyId"],
+                "properties": {
+                  "key": { "type": "string", "minLength": 1 },
+                  "propertyId": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "meta": {
+          "type": "object",
+          "required": ["adAccountId", "campaigns"],
+          "properties": {
+            "tokenEnvVar": {
+              "type": "string",
+              "minLength": 1
+            },
+            "adAccountId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lookbackDays": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "fields": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "campaigns": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["key", "campaignId"],
+                "properties": {
+                  "key": { "type": "string", "minLength": 1 },
+                  "campaignId": { "type": "string", "minLength": 1 },
+                  "label": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
