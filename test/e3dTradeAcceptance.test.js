@@ -33,6 +33,13 @@ function tempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
+// applyMandateScoutBias() intentionally evaluates mandate status against the
+// real wall clock (it's a live per-cycle check, not a deterministic
+// evaluated_at-scoped decision like evaluateRiskDecision) - see e3d-trade's
+// own scripts/verifyCapitalMandates.js, which documents exactly this and
+// anchors its own fixture's expires_at to test-run time for the same reason.
+// A fixed calendar expires_at here is a time bomb: it was in the future when
+// written but is now in the past, which is what made this test start failing.
 function activeMandate(overrides = {}) {
   return {
     mandate_id: 'mandate-acceptance-1',
@@ -42,7 +49,7 @@ function activeMandate(overrides = {}) {
     created_at: '2026-08-27T12:00:00.000Z',
     approved_at: '2026-08-27T12:01:00.000Z',
     effective_at: '2026-08-27T12:02:00.000Z',
-    expires_at: '2026-09-27T12:02:00.000Z',
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     correlation_id: 'corr-acceptance-1',
     proposal_id: 'proposal-acceptance-1',
     decision_id: 'decision-acceptance-1',
