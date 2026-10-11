@@ -13,7 +13,23 @@
   "research": {
     "knowledgeBaseMcpUrl": "http://127.0.0.1:4110",
     "webSearchProvider": "example-search",
-    "webSearchApiKeyEnvVar": "EXAMPLECO_WEB_SEARCH_API_KEY"
+    "webSearchApiKeyEnvVar": "EXAMPLECO_WEB_SEARCH_API_KEY",
+    "stripe": {
+      "apiKeyEnvVar": "EXAMPLECO_STRIPE_SECRET_KEY",
+      "lookbackDays": 14
+    }
+  },
+  "creative": {
+    "enginePath": "../e3d-creative",
+    "outDir": ".e3d-corp/instance/exampleco/creative-commissions",
+    "defaultProviders": {
+      "conceptGeneration": "claude",
+      "critique": "claude",
+      "qa": "claude"
+    }
+  },
+  "stripeOutcomeWebhook": {
+    "signingSecretEnvVar": "EXAMPLECO_STRIPE_WEBHOOK_SIGNING_SECRET"
   },
   "eventSources": [],
   "roles": {

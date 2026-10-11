@@ -120,7 +120,7 @@ test('assertProposalAuthorized refuses a pending proposal and passes an approved
     assert.throws(() => assertProposalAuthorized(proposal, 'issue-invoice'), /expected "issue-invoice"/);
     assert.throws(
       () => assertProposalAuthorized({ ...proposal, status: 'approved', authorityLevel: 3 }, 'send-outreach'),
-      /policy v4 requires 2/
+      /policy v5 requires 2/
     );
 
     const approved = { ...proposal, status: 'approved' };
