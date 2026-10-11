@@ -31,6 +31,10 @@
   "stripeOutcomeWebhook": {
     "signingSecretEnvVar": "EXAMPLECO_STRIPE_WEBHOOK_SIGNING_SECRET"
   },
+  "adRiskPolicy": {
+    "max_daily_spend_usd": 200,
+    "max_monthly_spend_usd": 4000
+  },
   "eventSources": [],
   "roles": {
     "opportunity.prospect": {
@@ -43,6 +47,9 @@
       "provider": "local"
     },
     "risk.assess": {
+      "provider": "local"
+    },
+    "creative.brief": {
       "provider": "local"
     }
   },
