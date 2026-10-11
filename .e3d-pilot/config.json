@@ -48,7 +48,7 @@
       "codex",
       "devin"
     ],
-    "execute": "csr"
+    "execute": "s2c"
   },
   "execute_local_data_paths": [
     ".e3d-corp/instance"
