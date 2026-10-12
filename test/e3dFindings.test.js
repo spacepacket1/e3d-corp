@@ -80,30 +80,42 @@ test('gatherFindings searches on the post text, not just the broad topic bucket'
   assert.equal(calls[0].toolArgs.q, 'what wallet tools do people actually use for bridging?');
 });
 
-test('gatherFindings falls back to a topic-based story search when the post-specific search finds nothing', async () => {
-  const calls = [];
-  const callMcp = async (toolName, toolArgs) => {
-    calls.push({ toolName, toolArgs });
+test('gatherFindings ranks the unfiltered batch by real keyword overlap with the post, picking a genuine match over whatever happens to be first', async () => {
+  const callMcp = async (toolName) => {
     if (toolName === 'search_stories') {
-      if (toolArgs.q === 'on-chain wallet and address analytics') {
-        return toolJsonResult([{ symbol: 'WALLETX', headline: 'cluster of 40 wallets rotated into the same token' }]);
-      }
-      return toolJsonResult([]);
+      // GST is first in the (unfiltered, since q is a documented no-op at this
+      // tier) batch; RSR is second but is the one that actually matches what
+      // the post is about, and should win on relevance despite its position.
+      return toolJsonResult([
+        { symbol: 'GST', headline: 'is +80% more expensive on ETH than SOL' },
+        { symbol: 'RSR', headline: 'bridged from ETH to SOL via Wormhole' }
+      ]);
     }
     throw new Error('unexpected tool call');
   };
 
   const result = await gatherFindings({
-    topic: 'on-chain wallet and address analytics',
-    postText: 'gm crypto twitter',
+    postText: 'did anyone see that wormhole bridge issue today?',
     callMcp
   });
   assert.equal(result.checked, true);
-  assert.equal(result.findings.length, 1);
-  assert.match(result.findings[0].text, /WALLETX/);
-  assert.equal(calls.length, 2);
-  assert.equal(calls[0].toolArgs.q, 'gm crypto twitter');
-  assert.equal(calls[1].toolArgs.q, 'on-chain wallet and address analytics');
+  assert.match(result.findings[0].text, /RSR/);
+});
+
+test('gatherFindings falls back to the first unused item when nothing in the batch actually matches', async () => {
+  const callMcp = async (toolName) => {
+    if (toolName === 'search_stories') {
+      return toolJsonResult([
+        { symbol: 'GST', headline: 'is +80% more expensive on ETH than SOL' },
+        { symbol: 'RSR', headline: 'bridged from ETH to SOL via Wormhole' }
+      ]);
+    }
+    throw new Error('unexpected tool call');
+  };
+
+  const result = await gatherFindings({ postText: 'gm crypto twitter', callMcp });
+  assert.equal(result.checked, true);
+  assert.match(result.findings[0].text, /GST/);
 });
 
 test('gatherFindings rotates to the next real story when the top one is excluded (the live e3d-mcp bug this guards against: search_stories ignores q and always returns the same top result)', async () => {
