@@ -1,0 +1,468 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>FutCo Growth Loop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /*
+    v2: redrawn as a ring on wide desktop (>=1180px): inner core = the
+    7-stage paid+creative cycle, placed on a circle via the standard CSS
+    "clock hand" technique (rotate the zero-size anchor by --angle, offset
+    the content by --r via plain top/left inside that rotated frame, then
+    counter-rotate the content so text stays upright). Outer ring = evidence
+    sources, autonomy guardrails, the e3d-trade capital mandate, and the X
+    engagement channel, each on a spoke near the core stage it feeds/governs.
+    Below 1180px a true radial diagram can't stay legible at any sane font
+    size, so everything falls back to the original linear card list (full
+    detail preserved, nothing summarized-only-in-the-ring is lost) with its
+    own explicit loop-closing footer.
+  */
+  :root{
+    --bg:#0b0e14; --surface:#12161f; --surface-2:#171c27; --border:#262c3a;
+    --fg:#e8ebf2; --fg-muted:#9aa3b5;
+    --accent:#35c6e8; --accent-soft:rgba(53,198,232,0.14);
+
+    --status-live:#3ecf8e; --status-human:#f2b84b; --status-partial:#5b9bf7;
+    --status-manual:#ef6f6f; --status-conditional:#b48cf2;
+
+    --repo-corp:#35c6e8; --repo-creative:#c07bf0; --repo-render:#f2994a;
+    --repo-pilot:#8893a8; --repo-trade:#e0b84a; --repo-external:#5c6478;
+
+    --font-display:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;
+    --font-body:"IBM Plex Sans","Segoe UI",sans-serif;
+    --font-mono:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
+    color-scheme:dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f6f5f2; --surface:#ffffff; --surface-2:#f0eee9; --border:#e1ded6;
+      --fg:#1c1f26; --fg-muted:#5b6270;
+      --accent:#0f91ad; --accent-soft:rgba(15,145,173,0.10);
+      --status-live:#1f9d66; --status-human:#b5790a; --status-partial:#2563c7;
+      --status-manual:#c23d3d; --status-conditional:#7a4fc9;
+      --repo-corp:#0f91ad; --repo-creative:#8a3fc9; --repo-render:#c2600f;
+      --repo-pilot:#5b6270; --repo-trade:#9c7a12; --repo-external:#8b93a3;
+      color-scheme:light;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f5f2; --surface:#ffffff; --surface-2:#f0eee9; --border:#e1ded6;
+    --fg:#1c1f26; --fg-muted:#5b6270;
+    --accent:#0f91ad; --accent-soft:rgba(15,145,173,0.10);
+    --status-live:#1f9d66; --status-human:#b5790a; --status-partial:#2563c7;
+    --status-manual:#c23d3d; --status-conditional:#7a4fc9;
+    --repo-corp:#0f91ad; --repo-creative:#8a3fc9; --repo-render:#c2600f;
+    --repo-pilot:#5b6270; --repo-trade:#9c7a12; --repo-external:#8b93a3;
+    color-scheme:light;
+  }
+
+  *{ box-sizing:border-box; }
+  body{ background:var(--bg); color:var(--fg); font-family:var(--font-body); }
+  .page{ max-width:1180px; margin:0 auto; padding-inline:16px; padding-block:8px 48px; }
+
+  .hero{ padding:34px 0 22px; }
+  .eyebrow{ font-family:var(--font-mono); font-size:0.76rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent); margin:0 0 10px; }
+  h1{ font-family:var(--font-display); font-weight:700; font-size:clamp(1.9rem,4vw,2.6rem); line-height:1.08; margin:0 0 14px; text-wrap:balance; color:var(--fg); }
+  .lede{ max-width:68ch; font-size:1rem; line-height:1.6; color:var(--fg-muted); margin:0; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:22px; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:var(--surface); margin-bottom:14px; }
+  .legend-group{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+  .legend-title{ font-family:var(--font-mono); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-muted); margin-right:2px; }
+
+  .authority-key{ font-size:0.82rem; line-height:1.7; color:var(--fg-muted); padding:10px 16px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); margin:0 0 30px; }
+  .authority-key strong{ color:var(--fg); }
+  .authority-key b{ color:var(--fg); font-family:var(--font-mono); font-weight:600; }
+
+  .chip{ display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; padding:3px 10px 3px 6px; border-radius:999px; background:var(--surface-2); border:1px solid var(--border); color:var(--fg-muted); white-space:nowrap; }
+  .chip::before{ content:""; width:7px; height:7px; border-radius:50%; background:var(--dot,var(--accent)); flex:none; }
+
+  .pill{ display:inline-block; border:1px solid; padding:3px 9px; border-radius:999px; font-family:var(--font-mono); font-size:0.64rem; letter-spacing:0.03em; text-transform:uppercase; white-space:nowrap; }
+  .status-live{ color:var(--status-live); border-color:var(--status-live); background:color-mix(in srgb, var(--status-live) 14%, transparent); }
+  .status-human{ color:var(--status-human); border-color:var(--status-human); background:color-mix(in srgb, var(--status-human) 14%, transparent); }
+  .status-partial{ color:var(--status-partial); border-color:var(--status-partial); background:color-mix(in srgb, var(--status-partial) 14%, transparent); }
+  .status-manual{ color:var(--status-manual); border-color:var(--status-manual); background:color-mix(in srgb, var(--status-manual) 14%, transparent); }
+  .status-conditional{ color:var(--status-conditional); border-color:var(--status-conditional); background:color-mix(in srgb, var(--status-conditional) 14%, transparent); }
+  .pill.authority{ color:var(--fg-muted); border-color:var(--border); background:var(--surface-2); }
+
+  /* ===================== RING (desktop, >=1180px) ===================== */
+  .ring-outer{ display:none; }
+  @media (min-width:1180px){
+    .ring-outer{ display:block; }
+    .linear-fallback{ display:none; }
+  }
+
+  .ring-outer{ position:relative; width:1040px; height:1040px; margin:18px auto 24px; }
+  .track{ position:absolute; top:50%; left:50%; width:420px; height:420px; margin:-210px 0 0 -210px; border:2px dashed var(--border); border-radius:50%; }
+  .track-outer{ position:absolute; top:50%; left:50%; width:740px; height:740px; margin:-370px 0 0 -370px; border:1px dotted var(--border); border-radius:50%; opacity:0.55; }
+
+  .hub{ position:absolute; top:50%; left:50%; width:208px; transform:translate(-50%,-50%); text-align:center; padding:0 6px; }
+  .hub .loop-icon{ font-size:2.1rem; line-height:1; color:var(--accent); font-family:var(--font-display); }
+  .hub h2{ font-family:var(--font-display); font-weight:700; font-size:1.1rem; letter-spacing:0.01em; margin:4px 0 5px; color:var(--fg); text-transform:uppercase; }
+  .hub p{ font-size:0.72rem; line-height:1.45; color:var(--fg-muted); margin:0; }
+
+  /* Zero-size anchor rotated by --angle; its child is laid out at plain
+     offset (top:-Rpx), which places it at radius R once the parent's
+     rotation carries it along, then the child counter-rotates by -angle
+     so its own content (text) renders upright. 0deg = top, clockwise. */
+  .rnode, .spoke{ position:absolute; top:50%; left:50%; width:0; height:0; transform:rotate(var(--angle)); }
+  .rnode-inner{ position:absolute; top:calc(var(--r) * -1px); left:0; width:168px; transform:translate(-50%,-50%) rotate(calc(var(--angle) * -1)); background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--repo,var(--accent)); border-radius:10px; padding:10px 11px 9px; }
+  .rnode .num{ font-family:var(--font-mono); color:var(--fg-muted); font-size:0.65rem; }
+  .rnode h3{ margin:2px 0 4px; font-family:var(--font-display); font-weight:700; font-size:0.86rem; text-transform:uppercase; color:var(--fg); line-height:1.15; }
+  .rnode .short{ font-size:0.71rem; line-height:1.4; color:var(--fg-muted); margin:0 0 7px; }
+  .rnode .short code{ font-family:var(--font-mono); font-size:0.63rem; background:var(--surface-2); padding:0 3px; border-radius:3px; border:1px solid var(--border); color:var(--fg); }
+  .rnode .rbottom{ display:flex; flex-wrap:wrap; gap:4px; }
+
+  .rnode.sat .rnode-inner{ width:150px; padding:9px 10px 8px; }
+  .rnode.sat h3{ font-size:0.8rem; margin:0 0 3px; }
+  .rnode.spur .rnode-inner{ border-top-style:dashed; }
+
+  /* spokes: a thin line, offset the same way, no counter-rotation needed */
+  .spoke i{ position:absolute; left:-1px; width:2px; background:var(--border); display:block; }
+  .spoke.dashed i{ background:none; border-left:2px dashed var(--border); width:0; }
+
+  .chev{ position:absolute; top:50%; left:50%; width:0; height:0; transform:rotate(var(--angle)); }
+  .chev i{ position:absolute; top:-210px; left:0; transform:translate(-50%,-50%); display:block; font-style:normal; font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:1.15rem; }
+
+  .xpod{ position:absolute; top:50%; left:50%; width:0; height:0; transform:rotate(var(--angle)); }
+  .xpod-inner{ position:absolute; top:calc(var(--r) * -1px); left:0; width:206px; transform:translate(-50%,-50%) rotate(calc(var(--angle) * -1)); background:var(--surface); border:1px solid var(--accent); border-radius:12px; padding:11px 12px 10px; }
+  .xpod h3{ margin:0 0 4px; font-family:var(--font-display); font-weight:700; font-size:0.84rem; text-transform:uppercase; color:var(--fg); }
+  .xpod .xsteps{ font-family:var(--font-mono); font-size:0.63rem; color:var(--accent); line-height:1.5; margin:0 0 6px; }
+  .xpod .short{ font-size:0.68rem; line-height:1.4; color:var(--fg-muted); margin:0 0 6px; }
+
+  .ring-label{ position:absolute; font-family:var(--font-mono); font-size:0.62rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--fg-muted); white-space:nowrap; }
+
+  /* ===================== LINEAR FALLBACK (<1180px) ===================== */
+  .external-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
+  .feed-note{ text-align:center; color:var(--fg-muted); font-family:var(--font-mono); font-size:0.78rem; margin:10px 0 28px; }
+  .loop-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-bottom:26px; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--repo,var(--accent)); border-radius:10px; padding:16px 16px 14px; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .card .card-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .card .num{ font-family:var(--font-mono); color:var(--fg-muted); font-size:0.78rem; letter-spacing:0.04em; }
+  .card h3{ margin:4px 0 2px; font-family:var(--font-display); font-weight:700; font-size:1.08rem; letter-spacing:0.01em; text-transform:uppercase; display:flex; justify-content:space-between; align-items:baseline; gap:10px; color:var(--fg); }
+  .card .flow{ color:var(--accent); font-family:var(--font-mono); font-weight:600; font-size:1rem; }
+  .card .mechanism{ margin:6px 0 12px; font-size:0.86rem; line-height:1.55; color:var(--fg-muted); }
+  .card .mechanism code{ font-family:var(--font-mono); font-size:0.78rem; background:var(--surface-2); padding:1px 5px; border-radius:4px; border:1px solid var(--border); color:var(--fg); }
+  .card .card-bottom{ margin-top:auto; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .card.ext .mechanism{ margin-bottom:0; }
+  .branch-wrap{ display:flex; justify-content:center; margin-bottom:26px; }
+  .card.branch{ max-width:640px; width:100%; border-left-style:dashed; border-left-width:4px; border-left-color:var(--repo,var(--accent)); }
+  .hint{ font-size:0.74rem; color:var(--fg-muted); font-style:italic; }
+  .loop-close{ display:flex; align-items:center; gap:16px; padding:18px 20px; border:1px solid var(--accent); border-radius:12px; background:var(--accent-soft); margin-top:4px; }
+  .loop-close .loop-icon{ font-size:2rem; line-height:1; color:var(--accent); flex:none; font-family:var(--font-display); }
+  .loop-close p{ margin:0; font-size:0.92rem; line-height:1.55; color:var(--fg); }
+
+  .section-head{ font-family:var(--font-mono); font-size:0.74rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--fg-muted); margin:30px 0 12px; padding-top:18px; border-top:1px solid var(--border); }
+  .section-head.first{ border-top:none; padding-top:0; margin-top:0; }
+
+  @media (max-width:480px){ .legend{ gap:14px; } }
+</style>
+
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow">e3d-corp · e3d-creative · e3d-cast / pod2vid · e3d-pilot · e3d-trade</p>
+    <h1>The FutCo Growth Loop</h1>
+    <p class="lede">One cycle, run per product (OppScan first). Corp watches real ad, revenue, and traffic signals, decides what's broken, commissions creative or hands a genuine capability gap to Pilot, executes within human-set spend bounds, and measures what really happened before running it again — with a parallel, human-gated channel finding and drafting organic engagement for e3d.ai on X.</p>
+  </header>
+
+  <section class="legend" aria-label="Legend">
+    <div class="legend-group">
+      <span class="legend-title">Owner</span>
+      <span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span>
+      <span class="chip" style="--dot:var(--repo-creative)">e3d-creative</span>
+      <span class="chip" style="--dot:var(--repo-render)">e3d-cast / pod2vid</span>
+      <span class="chip" style="--dot:var(--repo-pilot)">e3d-pilot</span>
+      <span class="chip" style="--dot:var(--repo-trade)">e3d-trade</span>
+      <span class="chip" style="--dot:var(--repo-external)">external platform</span>
+    </div>
+    <div class="legend-group">
+      <span class="legend-title">Status</span>
+      <span class="pill status-live">Live</span>
+      <span class="pill status-human">Human gate</span>
+      <span class="pill status-partial">Partial / bounded-autonomous</span>
+      <span class="pill status-manual">Manual / not built</span>
+      <span class="pill status-conditional">Conditional</span>
+    </div>
+  </section>
+
+  <p class="authority-key"><strong>Authority ladder —</strong> <b>A0</b> observe, autonomous &nbsp;·&nbsp; <b>A1</b> internal write, autonomous &nbsp;·&nbsp; <b>A2</b> external action, approval = execution &nbsp;·&nbsp; <b>A3</b> financial action, approval + separate confirm &nbsp;·&nbsp; <b>A4</b> irreversible, approval + separate confirm</p>
+
+  <!-- ============== RING VIEW (desktop) ============== -->
+  <div class="ring-outer" aria-label="FutCo growth loop, ring diagram">
+    <div class="track-outer"></div>
+    <div class="track"></div>
+
+    <div class="hub">
+      <div class="loop-icon">↻</div>
+      <h2>Growth Loop</h2>
+      <p>Inner ring: the 7-stage cycle. Outer ring: what feeds it, governs it, and runs alongside it.</p>
+    </div>
+
+    <!-- 7 core nodes, angle = i * 51.43deg clockwise from top, r=210 -->
+    <div class="rnode" style="--angle:0deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">01 → e3d-corp</div>
+        <h3>Observe</h3>
+        <p class="short">4 evidence pulls land as <code>evidence.gathered</code></p>
+        <div class="rbottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:51.43deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">02 → e3d-corp</div>
+        <h3>Diagnose</h3>
+        <p class="short"><code>opportunity.prospect</code> opens an Opportunity; Jev skips near-repeats</p>
+        <div class="rbottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:102.86deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">03 ↓ e3d-corp</div>
+        <h3>Decide</h3>
+        <p class="short">human marks it "pursuing" in the web UI</p>
+        <div class="rbottom"><span class="pill status-human">Human gate</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:154.29deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-creative)">
+        <div class="num">04 → e3d-creative</div>
+        <h3>Produce</h3>
+        <p class="short">concepts → critique → <strong>script-critique</strong> → QA → pod2vid renders</p>
+        <div class="rbottom"><span class="pill status-live">Live</span><span class="pill authority">A2</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:205.71deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">05 → e3d-corp</div>
+        <h3>Approve &amp; Distribute</h3>
+        <p class="short">human sets a spend mandate; execution inside it runs itself</p>
+        <div class="rbottom"><span class="pill status-partial">Partial</span><span class="pill authority">A3</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:257.14deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">06 → e3d-corp</div>
+        <h3>Measure</h3>
+        <p class="short">ad/revenue/traffic polls + two webhooks attribute the chain</p>
+        <div class="rbottom"><span class="pill status-partial">Partial</span><span class="pill authority">A0</span></div>
+      </div>
+    </div>
+
+    <div class="rnode" style="--angle:308.57deg;--r:210">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <div class="num">07 ↻ e3d-corp</div>
+        <h3>Learn</h3>
+        <p class="short">Outcome + Experience snapshot rolls into the next Observe</p>
+        <div class="rbottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </div>
+    </div>
+
+    <!-- 7 flow chevrons on the track, at the midpoint angle between each pair -->
+    <div class="chev" style="--angle:25.71deg"><i>›</i></div>
+    <div class="chev" style="--angle:77.14deg"><i>›</i></div>
+    <div class="chev" style="--angle:128.57deg"><i>›</i></div>
+    <div class="chev" style="--angle:180deg"><i>›</i></div>
+    <div class="chev" style="--angle:231.43deg"><i>›</i></div>
+    <div class="chev" style="--angle:282.86deg"><i>›</i></div>
+    <div class="chev" style="--angle:334.29deg"><i>›</i></div>
+
+    <!-- conditional Build spur, off Decide -->
+    <div class="spoke dashed" style="--angle:112deg"><i style="top:-300px;height:90px;"></i></div>
+    <div class="rnode spur sat" style="--angle:112deg;--r:330">
+      <div class="rnode-inner" style="--repo:var(--repo-pilot)">
+        <div class="num">⤷ e3d-pilot</div>
+        <h3>Build</h3>
+        <p class="short">rare: genuine capability gap → multi-model debate → feeds back into Produce</p>
+        <div class="rbottom"><span class="pill status-conditional">Conditional</span><span class="pill authority">A2</span></div>
+      </div>
+    </div>
+
+    <!-- outer: evidence sources, clustered around Observe (angle 0) -->
+    <div class="spoke" style="--angle:-24deg"><i style="top:-345px;height:135px;"></i></div>
+    <div class="rnode sat" style="--angle:-24deg;--r:360">
+      <div class="rnode-inner" style="--repo:var(--repo-external)">
+        <h3>Meta Ads</h3>
+        <p class="short">reads + <code>pause/start-campaign</code> now live</p>
+      </div>
+    </div>
+    <div class="spoke" style="--angle:-8deg"><i style="top:-355px;height:145px;"></i></div>
+    <div class="rnode sat" style="--angle:-8deg;--r:370">
+      <div class="rnode-inner" style="--repo:var(--repo-external)">
+        <h3>Stripe</h3>
+        <p class="short">charges, read-only</p>
+      </div>
+    </div>
+    <div class="spoke" style="--angle:8deg"><i style="top:-355px;height:145px;"></i></div>
+    <div class="rnode sat" style="--angle:8deg;--r:370">
+      <div class="rnode-inner" style="--repo:var(--repo-external)">
+        <h3>GA4</h3>
+        <p class="short">session/pageview, per property</p>
+      </div>
+    </div>
+    <div class="spoke" style="--angle:24deg"><i style="top:-345px;height:135px;"></i></div>
+    <div class="rnode sat" style="--angle:24deg;--r:360">
+      <div class="rnode-inner" style="--repo:var(--repo-external)">
+        <h3>oppscan.futco.ai</h3>
+        <p class="short">cursor-paged ops feed</p>
+      </div>
+    </div>
+    <div class="ring-label" style="top:6%;left:50%;transform:translateX(-50%);">evidence sources</div>
+
+    <!-- outer: autonomy guardrails, wrapping Approve & Distribute (angle 205.71) -->
+    <div class="spoke" style="--angle:187deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:187deg;--r:400">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <h3>Ad-Spend Mandate</h3>
+        <p class="short">circuit breaker + daily spend-ceiling kill switch</p>
+      </div>
+    </div>
+    <div class="spoke" style="--angle:206deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:206deg;--r:400">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <h3>Health Check</h3>
+        <p class="short">cron-scheduled; auto-suspend on confirmed breach (off by default)</p>
+      </div>
+    </div>
+    <div class="spoke" style="--angle:225deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:225deg;--r:400">
+      <div class="rnode-inner" style="--repo:var(--repo-corp)">
+        <h3>Pause / Resume</h3>
+        <p class="short"><code>meta pause-campaign</code> / <code>start-campaign</code></p>
+      </div>
+    </div>
+    <div class="ring-label" style="bottom:4%;left:8%;">autonomy guardrails</div>
+
+    <!-- outer: capital mandate <-> e3d-trade, near Measure/Learn boundary -->
+    <div class="spoke" style="--angle:282.86deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:282.86deg;--r:400">
+      <div class="rnode-inner" style="--repo:var(--repo-trade)">
+        <h3>Capital Mandate ⇄ e3d-trade</h3>
+        <p class="short">tightens risk limits only; outcomes feed back into Measure</p>
+      </div>
+    </div>
+    <div class="ring-label" style="bottom:24%;right:0;">external governance</div>
+
+    <!-- outer: X engagement pod, near Produce (angle 154.29) -->
+    <div class="spoke" style="--angle:154.29deg"><i style="top:-395px;height:185px;"></i></div>
+    <div class="xpod" style="--angle:154.29deg;--r:400">
+      <div class="xpod-inner">
+        <h3>e3d.ai on X — organic channel</h3>
+        <p class="xsteps">search → filter → Jev → finding → draft</p>
+        <p class="short">never auto-posts: queued for a human to review + post by hand. No live credentials yet.</p>
+        <div class="rbottom"><span class="pill status-partial">Partial</span></div>
+      </div>
+    </div>
+    <div class="ring-label" style="top:44%;right:0;">parallel loop</div>
+  </div>
+
+  <!-- ============== LINEAR FALLBACK (<1180px) — same content, full detail ============== -->
+  <div class="linear-fallback">
+    <section class="external-row" aria-label="External signal sources">
+      <article class="card ext" style="--repo:var(--repo-external)">
+        <h3>Meta Ads</h3>
+        <p class="mechanism"><code>GET /v21.0/…/insights</code> read, plus <code>pause-campaign</code>/<code>start-campaign</code> — <code>ads_management</code> now actually exercised, not just granted-unused</p>
+      </article>
+      <article class="card ext" style="--repo:var(--repo-external)">
+        <h3>Stripe</h3>
+        <p class="mechanism"><code>GET /v1/charges</code> — secret key, read-only</p>
+      </article>
+      <article class="card ext" style="--repo:var(--repo-external)">
+        <h3>GA4</h3>
+        <p class="mechanism"><code>pollGa4Metrics.js</code> — per-property session/pageview window</p>
+      </article>
+      <article class="card ext" style="--repo:var(--repo-external)">
+        <h3>oppscan.futco.ai</h3>
+        <p class="mechanism"><code>pollOppscanFeed.js</code> — cursor-paged ops feed, no contact info</p>
+      </article>
+    </section>
+    <p class="feed-note">↓ polled on cron schedules — feeds Observe, below</p>
+
+    <section class="loop-row" aria-label="Loop stages 1 to 3">
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">01</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Observe<span class="flow">→</span></h3>
+        <p class="mechanism">4 pollers (<code>pollMetaInsights.js</code>, <code>pollStripeRevenue.js</code>, <code>pollGa4Metrics.js</code>, <code>pollOppscanFeed.js</code>) each land a pull as <code>evidence.gathered</code></p>
+        <div class="card-bottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">02</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Diagnose<span class="flow">→</span></h3>
+        <p class="mechanism"><code>opportunity.prospect</code> opens a creative Opportunity from the new evidence; a Jev Choice check skips likely near-duplicates</p>
+        <div class="card-bottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">03</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Decide<span class="flow">↓</span></h3>
+        <p class="mechanism">a human reviews the Opportunity and marks it "pursuing" in the web UI</p>
+        <div class="card-bottom"><span class="pill status-human">Human gate</span></div>
+      </article>
+    </section>
+
+    <section class="branch-wrap" aria-label="Conditional engineering hop">
+      <article class="card branch" style="--repo:var(--repo-pilot)">
+        <div class="card-top"><span class="chip" style="--dot:var(--repo-pilot)">e3d-pilot</span><span class="pill status-conditional">Conditional</span></div>
+        <h3>Build <span class="flow">⤷</span></h3>
+        <p class="mechanism"><code>pilot-handoff</code> proposal → multi-model debate and build — only when e3d-creative or e3d-cast genuinely can't do it yet. Feeds back into Produce.</p>
+        <div class="card-bottom"><span class="pill authority">A2</span><span class="hint">rare path — most variants skip this hop entirely</span></div>
+      </article>
+    </section>
+
+    <section class="loop-row" aria-label="Loop stages 4 to 7">
+      <article class="card" style="--repo:var(--repo-creative)">
+        <div class="card-top"><span class="num">04</span><span class="chip" style="--dot:var(--repo-creative)">e3d-creative</span></div>
+        <h3>Produce<span class="flow">→</span></h3>
+        <p class="mechanism">approved <code>commission-creative</code> → concepts → critique → <strong>script-critique</strong> → QA → package → <code>cast-compatible.json</code>; pod2vid runs the critique pass before TTS when <code>E3D_CREATIVE_BIN</code> is set, falling back automatically if not</p>
+        <div class="card-bottom"><span class="pill status-live">Live</span><span class="pill authority">A2</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">05</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Approve &amp; distribute<span class="flow">→</span></h3>
+        <p class="mechanism">a human sets an <code>ad_mandate</code>'s bounds (spend ceiling, campaigns); inside those bounds e3d-corp itself adjusts spend and can <code>pause-campaign</code>/<code>start-campaign</code> — anything outside the mandate still needs a manual <code>confirmAndExecute</code></p>
+        <div class="card-bottom"><span class="pill status-partial">Partial</span><span class="pill authority">A3</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">06</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Measure<span class="flow">→</span></h3>
+        <p class="mechanism">same four polls, plus <code>/webhooks/stripe</code> and e3d-trade's outcome-export webhook each attribute a payment or trade result to its exact chain</p>
+        <div class="card-bottom"><span class="pill status-partial">Partial</span><span class="pill authority">A0</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="num">07</span><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Learn<span class="flow">↻</span></h3>
+        <p class="mechanism"><code>recordOutcome</code> plus an Experience snapshot — now spanning ad, creative, and capital-mandate outcomes — rolls into the next Observe pass</p>
+        <div class="card-bottom"><span class="pill status-live">Live</span><span class="pill authority">A0</span></div>
+      </article>
+    </section>
+
+    <p class="section-head first">Outer: guardrails &amp; a parallel channel</p>
+    <section class="loop-row" aria-label="Outer systems">
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>Ad-spend guardrails</h3>
+        <p class="mechanism">a circuit breaker and a daily-spend-ceiling kill switch bound the Approve &amp; Distribute mandate; <code>checkAdMandateHealth.js</code> runs on cron and can auto-suspend a mandate on a confirmed breach (<code>autoSuspendEnabled</code>, off by default — observe-only until a human flips it)</p>
+        <div class="card-bottom"><span class="pill status-partial">Partial</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-trade)">
+        <div class="card-top"><span class="chip" style="--dot:var(--repo-trade)">e3d-trade</span></div>
+        <h3>Capital mandate</h3>
+        <p class="mechanism">e3d-corp can submit or tighten a capital mandate against e3d-trade's own autonomous trading limits (position/exposure/turnover) — it can only tighten them, never loosen; e3d-trade reports outcomes back via its own webhook, which Measure/Learn above fold in</p>
+        <div class="card-bottom"><span class="pill status-partial">Partial</span></div>
+      </article>
+      <article class="card" style="--repo:var(--repo-corp)">
+        <div class="card-top"><span class="chip" style="--dot:var(--repo-corp)">e3d-corp</span></div>
+        <h3>X engagement (e3d.ai, organic)</h3>
+        <p class="mechanism">a second, independent acquisition loop, parallel to the paid-ads cycle above: search (read-only) → spam/<code>reply_settings</code> filter → Jev relevance (fails closed) → a real e3d.ai finding (never fabricated) → a drafted reply, queued and emailed for a human to review and post by hand. Deliberately never auto-posts.</p>
+        <div class="card-bottom"><span class="pill status-partial">Partial</span><span class="hint">built and tested — no live X credentials yet</span></div>
+      </article>
+    </section>
+
+    <footer class="loop-close">
+      <span class="loop-icon">↻</span>
+      <p>The loop closes here: Learn's Outcome and Experience data is exactly what the next Observe pass reads. It runs on cron schedules and event triggers — polls, webhooks, approvals — never as a one-shot pipeline. The X engagement channel closes its own, smaller loop the same way, independently.</p>
+    </footer>
+  </div>
+</div>
+
+</body></html>
