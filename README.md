@@ -323,6 +323,8 @@ Phases 1–10 are implemented: runtime foundation, event store, research layer, 
 
 Beyond those ten phases, additional autonomous capabilities have since been added on the same safety model (evidence pulls are autonomous, anything consequential is gated): an ad-spend mandate with a circuit breaker and spend-ceiling kill switch, a real Meta Ads read/pause/resume integration, Stripe and GA4 revenue/traffic evidence, an oppscan.futco.ai feed adapter, creative-brief commissioning to e3d-creative, a capital-mandate integration with e3d-trade, and the X engagement pipeline above. See `lib/research/adapter.js` for the full current list of evidence adapters.
 
+[**The FutCo Growth Loop**](https://claude.ai/artifact/ErRkDLpuZNgsnwir7RwNa8) diagrams how all of this fits together: the inner ring is the 7-stage Observe→Learn cycle, the outer ring is the evidence sources, autonomy guardrails, the e3d-trade capital mandate, and the X engagement channel around it.
+
 Phase 11 as originally specified — CRM, ledger, and a bookkeeper role — remains unbuilt; the additional work above addressed more pressing needs first. Model fine-tuning, multi-model negotiation for high-authority decisions, and any mechanism for adding roles are all gated on evidence from the evaluation layer that they would improve real outcomes. None of them ship early merely because they're possible.
 
 ## License
