@@ -8,7 +8,8 @@
 // the review email). Run by cron every couple of hours.
 //
 // Pipeline per search query: X search (read-only, app-auth bearer token) ->
-// spam/reply_settings pre-filter -> Jev relevance check against configured
+// spam/reply_settings pre-filter -> engagement floor (skip thin/bot-feeling
+// posts nobody has engaged with) -> Jev relevance check against configured
 // topics -> a real e3d.ai finding for the matched topic -> reply draft
 // (skipped with no LLM call if there's no finding) -> queue.
 
@@ -16,7 +17,7 @@ import crypto from 'node:crypto';
 import { loadInstance } from '../../lib/config.js';
 import { createResearchAdapter } from '../../lib/research/adapter.js';
 import { queryEvents, appendEvent } from '../../lib/events/store.js';
-import { isLikelySpam } from '../../lib/research/xSpamFilter.js';
+import { isLikelySpam, hasEnoughEngagement, DEFAULT_MIN_ENGAGEMENT } from '../../lib/research/xSpamFilter.js';
 import { checkPostRelevance } from '../../lib/research/jevRelevance.js';
 import { gatherFindings } from '../../lib/research/e3dFindings.js';
 import { draftEngagementReply } from '../../lib/roles/xEngagementReply.js';
@@ -81,6 +82,9 @@ async function main() {
 
       const spamCheck = isLikelySpam(tweet);
       if (spamCheck.spam) continue;
+
+      const engagementCheck = hasEnoughEngagement(tweet, xConfig.minEngagement ?? DEFAULT_MIN_ENGAGEMENT);
+      if (!engagementCheck.enough) continue;
 
       const relevance = await checkPostRelevance({ text: tweet.text, topics: xConfig.topics });
       if (!relevance.relevant) continue;
