@@ -309,13 +309,21 @@ npm test          # node --test
 npm run check     # syntax check + full suite
 ```
 
-Ten suites — one per implemented phase, 94 tests — run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+36 test files, 276 tests, run against the real library functions rather than mocks, including live integration against the knowledge-base MCP server.
+
+## X/Twitter engagement (draft-and-queue, no auto-posting)
+
+A separate acquisition channel for e3d.ai: `ops/reports/runXEngagement.js` searches X for public posts matching `research.x.topics` (read-only, app-auth bearer token), runs them through a spam/`reply_settings` pre-filter (`lib/research/xSpamFilter.js`), a Jev relevance check that fails closed (`lib/research/jevRelevance.js`), and — only if a real, concrete e3d.ai data point exists for the matched topic (`lib/research/e3dFindings.js`, pulled live from e3d-mcp) — drafts a reply grounded in that finding (`lib/roles/xEngagementReply.js`). Nothing is posted automatically: an accepted draft is queued as an `x.draftQueued` event, and `ops/reports/xEngagementDigest.js` emails the queue for a human to review and post by hand. This is deliberate, not a stopgap — X suspends accounts for unsolicited automated replies, so posting stays a human action even once credentials exist.
+
+As of this writing there are no live X API credentials configured (`research.x.bearerTokenEnvVar` in the instance config is unset), so this pipeline is wired and tested but not yet running against real data.
 
 ## Status
 
 Phases 1–10 are implemented: runtime foundation, event store, research layer, opportunity engine, authority and decision framework, web UI, pursuit and outreach, the e3d-pilot handoff, outcome and experience capture, and evaluation.
 
-Phase 11 — CRM, ledger, and a bookkeeper role — is specified but deliberately unbuilt. It waits until the pursuit phases produce enough real deal volume to justify it. Model fine-tuning, multi-model negotiation for high-authority decisions, and any mechanism for adding roles are all gated on evidence from the evaluation layer that they would improve real outcomes. None of them ship early merely because they're possible.
+Beyond those ten phases, additional autonomous capabilities have since been added on the same safety model (evidence pulls are autonomous, anything consequential is gated): an ad-spend mandate with a circuit breaker and spend-ceiling kill switch, a real Meta Ads read/pause/resume integration, Stripe and GA4 revenue/traffic evidence, an oppscan.futco.ai feed adapter, creative-brief commissioning to e3d-creative, a capital-mandate integration with e3d-trade, and the X engagement pipeline above. See `lib/research/adapter.js` for the full current list of evidence adapters.
+
+Phase 11 as originally specified — CRM, ledger, and a bookkeeper role — remains unbuilt; the additional work above addressed more pressing needs first. Model fine-tuning, multi-model negotiation for high-authority decisions, and any mechanism for adding roles are all gated on evidence from the evaluation layer that they would improve real outcomes. None of them ship early merely because they're possible.
 
 ## License
 
