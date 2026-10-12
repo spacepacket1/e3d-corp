@@ -59,6 +59,7 @@ async function main() {
 
   let draftsQueued = 0;
   let candidatesSeen = 0;
+  const usedFindingTexts = new Set();
 
   for (const query of xConfig.searchQueries) {
     if (draftsQueued >= draftsPerRun) break;
@@ -85,8 +86,14 @@ async function main() {
       if (!relevance.relevant) continue;
 
       const topicText = resolveMatchedTopicText(relevance.matchedTopic, xConfig.topics);
-      const findingsResult = await gatherFindings({ topic: topicText, serverPath: xConfig.e3dMcpServerPath });
+      const findingsResult = await gatherFindings({
+        topic: topicText,
+        postText: tweet.text,
+        serverPath: xConfig.e3dMcpServerPath,
+        excludeFindingTexts: usedFindingTexts
+      });
       if (findingsResult.findings.length === 0) continue;
+      usedFindingTexts.add(findingsResult.findings[0].text);
 
       const draft = await draftEngagementReply({
         instanceConfig: config,
