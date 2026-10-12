@@ -29,6 +29,9 @@
           "label": "Example product - v1",
           "product": "example-product"
         }
+      ],
+      "opportunitySignalRules": [
+        { "metric": "cost_per_landing_page_view", "window_days": 7, "degradation_pct": 0.3 }
       ]
     }
   },

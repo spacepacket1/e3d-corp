@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveCampaignIdsForMandate, evaluateDegradationRule, evaluateAdMandateHealth } from '../lib/health/adMandateHealth.js';
+import { resolveCampaignIdsForMandate, evaluateDegradationRule, evaluateAdMandateHealth, evaluateSpendCeilings } from '../lib/health/adMandateHealth.js';
 
 function row({ date, campaignId = 'camp-1', spend, landingPageViews, clicks = null }) {
   return { date, campaignId, campaignName: 'test', impressions: null, clicks, spend, cpm: null, landingPageViews, costPerLandingPageView: null, actions: [], costPerActionType: [] };
@@ -82,9 +82,11 @@ test('evaluateDegradationRule treats a falling landing_page_view_rate as degrada
   assert.equal(result.breached, true);
 });
 
-test('evaluateAdMandateHealth runs every pause_on_metric_degradation rule and returns one result per rule', () => {
+test('evaluateAdMandateHealth runs every pause_on_metric_degradation rule plus the two always-on spend-ceiling checks', () => {
   const mandate = {
     constraints: {
+      max_daily_spend_usd: 20,
+      max_monthly_spend_usd: 400,
       pause_on_metric_degradation: [
         { metric: 'cpl_usd', window_days: 7, degradation_pct: 0.4 },
         { metric: 'unsupported_metric', window_days: 7, degradation_pct: 0.4 }
@@ -92,7 +94,31 @@ test('evaluateAdMandateHealth runs every pause_on_metric_degradation rule and re
     }
   };
   const results = evaluateAdMandateHealth(mandate, { rows: [], now: NOW });
-  assert.equal(results.length, 2);
+  assert.equal(results.length, 4);
   assert.equal(results[0].metric, 'cpl_usd');
+  assert.equal(results[0].kind, 'metric_degradation');
   assert.equal(results[1].insufficientData, true);
+  const spendResults = results.filter((result) => result.kind === 'spend_ceiling');
+  assert.equal(spendResults.length, 2);
+  assert.deepEqual(spendResults.map((result) => result.metric).sort(), ['max_daily_spend_usd', 'max_monthly_spend_usd']);
+  assert.ok(spendResults.every((result) => result.insufficientData === true));
+});
+
+test('evaluateSpendCeilings flags a breach of either ceiling using real summed spend, and is never configurable-off', () => {
+  const rows = [row({ date: daysAgo(0, NOW), spend: 25, landingPageViews: 10 })];
+  const results = evaluateSpendCeilings(rows, { max_daily_spend_usd: 20, max_monthly_spend_usd: 400 }, NOW);
+  const daily = results.find((result) => result.metric === 'max_daily_spend_usd');
+  assert.equal(daily.insufficientData, false);
+  assert.equal(daily.actual, 25);
+  assert.equal(daily.breached, true);
+
+  const monthly = results.find((result) => result.metric === 'max_monthly_spend_usd');
+  assert.equal(monthly.insufficientData, false);
+  assert.equal(monthly.actual, 25);
+  assert.equal(monthly.breached, false);
+});
+
+test('evaluateSpendCeilings reports insufficientData, never a false "ok", when there is no evidence for today/this month', () => {
+  const results = evaluateSpendCeilings([], { max_daily_spend_usd: 20, max_monthly_spend_usd: 400 }, NOW);
+  assert.ok(results.every((result) => result.insufficientData === true && result.breached === false));
 });

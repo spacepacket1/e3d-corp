@@ -77,7 +77,9 @@ async function activeMandateProposal(dataDir, mandateOverrides = {}) {
   return getProposal(dataDir, proposal.id);
 }
 
-function daysAgo(n, from = new Date('2026-10-11T00:00:00.000Z')) {
+const NOW = new Date('2026-10-11T00:00:00.000Z');
+
+function daysAgo(n, from = NOW) {
   return new Date(from.getTime() - n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
@@ -98,7 +100,7 @@ function landInsightsEvidence(dataDir, rows, correlationId) {
 test('runAdMandateHealthCheck reports no-active-mandates when there are none', async () => {
   const dataDir = makeTempDataDir();
   try {
-    const outcomes = await runAdMandateHealthCheck(dataDir, {});
+    const outcomes = await runAdMandateHealthCheck(dataDir, {}, { now: NOW });
     assert.equal(outcomes.length, 1);
     assert.equal(outcomes[0].kind, 'no-active-mandates');
   } finally {
@@ -126,14 +128,18 @@ test('runAdMandateHealthCheck reports ok when the metric has not degraded, and a
       dataDir,
       [
         row({ date: daysAgo(10), spend: 100, landingPageViews: 50 }),
-        row({ date: daysAgo(2), spend: 100, landingPageViews: 50 })
+        row({ date: daysAgo(2), spend: 100, landingPageViews: 50 }),
+        row({ date: daysAgo(0), spend: 10, landingPageViews: 5 }) // today, well under the $150 daily ceiling
       ],
       mandateProposal.correlationId
     );
 
-    const outcomes = await runAdMandateHealthCheck(dataDir, { research: { meta: metaConfig } });
-    assert.equal(outcomes.length, 1);
-    assert.equal(outcomes[0].kind, 'ok');
+    const outcomes = await runAdMandateHealthCheck(dataDir, { research: { meta: metaConfig } }, { now: NOW });
+    // One metric_degradation result plus the two always-on spend-ceiling
+    // checks (both well under their ceiling here, so also "ok").
+    assert.equal(outcomes.length, 3);
+    assert.ok(outcomes.every((outcome) => outcome.kind === 'ok'));
+    assert.equal(outcomes.filter((outcome) => outcome.checkKind === 'spend_ceiling').length, 2);
     assert.equal(queryEvents(dataDir, { type: 'ad-mandate.health-check.breach-observed' }).length, 0);
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
@@ -148,14 +154,17 @@ test('runAdMandateHealthCheck in observe-only mode (default) logs a breach but n
       dataDir,
       [
         row({ date: daysAgo(10), spend: 100, landingPageViews: 50 }), // prior: $2/LPV
-        row({ date: daysAgo(2), spend: 200, landingPageViews: 50 }) // current: $4/LPV, +100%
+        row({ date: daysAgo(2), spend: 200, landingPageViews: 50 }), // current: $4/LPV, +100%
+        row({ date: daysAgo(0), spend: 10, landingPageViews: 5 }) // today, well under the $150 daily ceiling
       ],
       mandateProposal.correlationId
     );
 
-    const outcomes = await runAdMandateHealthCheck(dataDir, { research: { meta: metaConfig } });
-    assert.equal(outcomes.length, 1);
-    assert.equal(outcomes[0].kind, 'breach-observed');
+    const outcomes = await runAdMandateHealthCheck(dataDir, { research: { meta: metaConfig } }, { now: NOW });
+    assert.equal(outcomes.length, 3);
+    const degradationOutcome = outcomes.find((outcome) => outcome.checkKind === 'metric_degradation');
+    assert.equal(degradationOutcome.kind, 'breach-observed');
+    assert.ok(outcomes.filter((outcome) => outcome.checkKind === 'spend_ceiling').every((outcome) => outcome.kind === 'ok'));
     assert.equal(queryEvents(dataDir, { type: 'ad-mandate.health-check.breach-observed' }).length, 1);
     assert.equal(queryEvents(dataDir, { type: 'ad-mandate.auto-suspended' }).length, 0);
     assert.equal(getProposal(dataDir, mandateProposal.id).payload.status, 'active');
@@ -180,10 +189,50 @@ test('runAdMandateHealthCheck with autoSuspendEnabled:true auto-suspends on a co
     const outcomes = await runAdMandateHealthCheck(dataDir, {
       research: { meta: metaConfig },
       adMandateHealthCheck: { autoSuspendEnabled: true }
-    });
+    }, { now: NOW });
 
-    assert.equal(outcomes.length, 1);
-    assert.equal(outcomes[0].kind, 'auto-suspended');
+    assert.equal(outcomes.length, 3);
+    const degradationOutcome = outcomes.find((outcome) => outcome.checkKind === 'metric_degradation');
+    assert.equal(degradationOutcome.kind, 'auto-suspended');
+    assert.equal(queryEvents(dataDir, { type: 'ad-mandate.auto-suspended' }).length, 1);
+    assert.equal(getProposal(dataDir, mandateProposal.id).payload.status, 'suspended');
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+// The literal "what if we spend more than $20/day" scenario: the mandate's
+// own max_daily_spend_usd ceiling, checked against real summed Meta spend -
+// a wholly separate, always-on check from pause_on_metric_degradation above.
+test('runAdMandateHealthCheck in observe-only mode flags a daily-spend-ceiling breach but never suspends', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    const mandateProposal = await activeMandateProposal(dataDir, { constraints: { ...validAdMandate().constraints, max_daily_spend_usd: 20 } });
+    landInsightsEvidence(dataDir, [row({ date: daysAgo(0), spend: 35, landingPageViews: 10 })], mandateProposal.correlationId);
+
+    const outcomes = await runAdMandateHealthCheck(dataDir, { research: { meta: metaConfig } }, { now: NOW });
+    const spendOutcome = outcomes.find((outcome) => outcome.checkKind === 'spend_ceiling' && outcome.metric === 'max_daily_spend_usd');
+    assert.equal(spendOutcome.kind, 'breach-observed');
+    assert.equal(queryEvents(dataDir, { type: 'ad-mandate.health-check.breach-observed' }).length, 1);
+    assert.equal(queryEvents(dataDir, { type: 'ad-mandate.auto-suspended' }).length, 0);
+    assert.equal(getProposal(dataDir, mandateProposal.id).payload.status, 'active');
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('runAdMandateHealthCheck with autoSuspendEnabled:true auto-suspends a mandate that exceeded its daily spend ceiling', async () => {
+  const dataDir = makeTempDataDir();
+  try {
+    const mandateProposal = await activeMandateProposal(dataDir, { constraints: { ...validAdMandate().constraints, max_daily_spend_usd: 20 } });
+    landInsightsEvidence(dataDir, [row({ date: daysAgo(0), spend: 35, landingPageViews: 10 })], mandateProposal.correlationId);
+
+    const outcomes = await runAdMandateHealthCheck(dataDir, {
+      research: { meta: metaConfig },
+      adMandateHealthCheck: { autoSuspendEnabled: true }
+    }, { now: NOW });
+    const spendOutcome = outcomes.find((outcome) => outcome.checkKind === 'spend_ceiling' && outcome.metric === 'max_daily_spend_usd');
+    assert.equal(spendOutcome.kind, 'auto-suspended');
     assert.equal(queryEvents(dataDir, { type: 'ad-mandate.auto-suspended' }).length, 1);
     assert.equal(getProposal(dataDir, mandateProposal.id).payload.status, 'suspended');
   } finally {
