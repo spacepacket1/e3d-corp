@@ -109,7 +109,7 @@ test('collectDegradationCandidates honors a configured opportunitySignalRules ov
   }
 });
 
-test('recordDegradationSignal is idempotent within the same window period - a second scan finds no new candidate', () => {
+test('a signal that successfully produced an Opportunity is not re-raised on a later scan in the same window', () => {
   const dataDir = makeTempDataDir();
   try {
     landInsightsEvidence(dataDir, [
@@ -119,12 +119,44 @@ test('recordDegradationSignal is idempotent within the same window period - a se
 
     const first = collectDegradationCandidates(dataDir, { campaigns: CAMPAIGNS, now: NOW });
     assert.equal(first.length, 1);
-    recordDegradationSignal(dataDir, first[0]);
+    const { signalEvent } = recordDegradationSignal(dataDir, first[0]);
+
+    // Simulate opportunity.prospect succeeding - an opportunity.created event
+    // caused by this exact signal event, the real completion marker.
+    appendEvent(dataDir, {
+      type: 'opportunity.created',
+      source: 'role:opportunity.prospect',
+      subject: { type: 'opportunity', id: 'opp-from-signal' },
+      payload: { id: 'opp-from-signal' },
+      causationId: signalEvent.id,
+      correlationId: signalEvent.correlationId
+    });
 
     const second = collectDegradationCandidates(dataDir, { campaigns: CAMPAIGNS, now: NOW });
     assert.equal(second.length, 0);
     assert.equal(alreadySignaledIds(dataDir).size, 1);
     assert.equal(queryEvents(dataDir, { type: 'ad-performance.degradation_signal.detected' }).length, 1);
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('a signal that failed to produce an Opportunity (e.g. a provider error) stays retryable on the next scan', () => {
+  const dataDir = makeTempDataDir();
+  try {
+    landInsightsEvidence(dataDir, [
+      row({ date: daysAgo(10), spend: 100, landingPageViews: 50 }),
+      row({ date: daysAgo(2), spend: 200, landingPageViews: 50 })
+    ]);
+
+    const first = collectDegradationCandidates(dataDir, { campaigns: CAMPAIGNS, now: NOW });
+    recordDegradationSignal(dataDir, first[0]);
+    // No opportunity.created event follows - exactly what happens when
+    // opportunity.prospect throws after the signal was already recorded.
+
+    const second = collectDegradationCandidates(dataDir, { campaigns: CAMPAIGNS, now: NOW });
+    assert.equal(second.length, 1);
+    assert.equal(second[0].campaign.campaignId, 'camp-1');
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
