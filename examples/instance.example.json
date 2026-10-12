@@ -17,6 +17,19 @@
     "stripe": {
       "apiKeyEnvVar": "EXAMPLECO_STRIPE_SECRET_KEY",
       "lookbackDays": 14
+    },
+    "meta": {
+      "tokenEnvVar": "EXAMPLECO_META_ADS_READ_TOKEN",
+      "adAccountId": "000000000000000",
+      "lookbackDays": 14,
+      "campaigns": [
+        {
+          "key": "example_campaign_v1",
+          "campaignId": "000000000000001",
+          "label": "Example product - v1",
+          "product": "example-product"
+        }
+      ]
     }
   },
   "creative": {
@@ -34,6 +47,9 @@
   "adRiskPolicy": {
     "max_daily_spend_usd": 200,
     "max_monthly_spend_usd": 4000
+  },
+  "adMandateHealthCheck": {
+    "autoSuspendEnabled": false
   },
   "eventSources": [],
   "roles": {
