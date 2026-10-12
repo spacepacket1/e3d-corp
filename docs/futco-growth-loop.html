@@ -89,9 +89,9 @@
     .linear-fallback{ display:none; }
   }
 
-  .ring-outer{ position:relative; width:1040px; height:1040px; margin:18px auto 24px; }
-  .track{ position:absolute; top:50%; left:50%; width:420px; height:420px; margin:-210px 0 0 -210px; border:2px dashed var(--border); border-radius:50%; }
-  .track-outer{ position:absolute; top:50%; left:50%; width:740px; height:740px; margin:-370px 0 0 -370px; border:1px dotted var(--border); border-radius:50%; opacity:0.55; }
+  .ring-outer{ position:relative; width:1120px; height:1120px; margin:18px auto 24px; }
+  .track{ position:absolute; top:50%; left:50%; width:300px; height:300px; margin:-150px 0 0 -150px; border:2px dashed var(--border); border-radius:50%; }
+  .track-outer{ position:absolute; top:50%; left:50%; width:820px; height:820px; margin:-410px 0 0 -410px; border:1px dotted var(--border); border-radius:50%; opacity:0.55; }
 
   .hub{ position:absolute; top:50%; left:50%; width:208px; transform:translate(-50%,-50%); text-align:center; padding:0 6px; }
   .hub .loop-icon{ font-size:2.1rem; line-height:1; color:var(--accent); font-family:var(--font-display); }
@@ -119,10 +119,10 @@
   .spoke.dashed i{ background:none; border-left:2px dashed var(--border); width:0; }
 
   .chev{ position:absolute; top:50%; left:50%; width:0; height:0; transform:rotate(var(--angle)); }
-  .chev i{ position:absolute; top:-210px; left:0; transform:translate(-50%,-50%); display:block; font-style:normal; font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:1.15rem; }
+  .chev i{ position:absolute; top:-150px; left:0; transform:translate(-50%,-50%); display:block; font-style:normal; font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:1.3rem; }
 
   .xpod{ position:absolute; top:50%; left:50%; width:0; height:0; transform:rotate(var(--angle)); }
-  .xpod-inner{ position:absolute; top:calc(var(--r) * -1px); left:0; width:206px; transform:translate(-50%,-50%) rotate(calc(var(--angle) * -1)); background:var(--surface); border:1px solid var(--accent); border-radius:12px; padding:11px 12px 10px; }
+  .xpod-inner{ position:absolute; top:calc(var(--r) * -1px); left:0; width:190px; transform:translate(-50%,-50%) rotate(calc(var(--angle) * -1)); background:var(--surface); border:1px solid var(--accent); border-radius:12px; padding:11px 12px 10px; }
   .xpod h3{ margin:0 0 4px; font-family:var(--font-display); font-weight:700; font-size:0.84rem; text-transform:uppercase; color:var(--fg); }
   .xpod .xsteps{ font-family:var(--font-mono); font-size:0.63rem; color:var(--accent); line-height:1.5; margin:0 0 6px; }
   .xpod .short{ font-size:0.68rem; line-height:1.4; color:var(--fg-muted); margin:0 0 6px; }
@@ -269,8 +269,8 @@
     <div class="chev" style="--angle:334.29deg"><i>›</i></div>
 
     <!-- conditional Build spur, off Decide -->
-    <div class="spoke dashed" style="--angle:112deg"><i style="top:-300px;height:90px;"></i></div>
-    <div class="rnode spur sat" style="--angle:112deg;--r:330">
+    <div class="spoke dashed" style="--angle:125deg"><i style="top:-400px;height:190px;"></i></div>
+    <div class="rnode spur sat" style="--angle:125deg;--r:430">
       <div class="rnode-inner" style="--repo:var(--repo-pilot)">
         <div class="num">⤷ e3d-pilot</div>
         <h3>Build</h3>
@@ -280,59 +280,59 @@
     </div>
 
     <!-- outer: evidence sources, clustered around Observe (angle 0) -->
-    <div class="spoke" style="--angle:-24deg"><i style="top:-345px;height:135px;"></i></div>
-    <div class="rnode sat" style="--angle:-24deg;--r:360">
+    <div class="spoke" style="--angle:-39deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:-39deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-external)">
         <h3>Meta Ads</h3>
         <p class="short">reads + <code>pause/start-campaign</code> now live</p>
       </div>
     </div>
-    <div class="spoke" style="--angle:-8deg"><i style="top:-355px;height:145px;"></i></div>
-    <div class="rnode sat" style="--angle:-8deg;--r:370">
+    <div class="spoke" style="--angle:-13deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:-13deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-external)">
         <h3>Stripe</h3>
         <p class="short">charges, read-only</p>
       </div>
     </div>
-    <div class="spoke" style="--angle:8deg"><i style="top:-355px;height:145px;"></i></div>
-    <div class="rnode sat" style="--angle:8deg;--r:370">
+    <div class="spoke" style="--angle:13deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:13deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-external)">
         <h3>GA4</h3>
         <p class="short">session/pageview, per property</p>
       </div>
     </div>
-    <div class="spoke" style="--angle:24deg"><i style="top:-345px;height:135px;"></i></div>
-    <div class="rnode sat" style="--angle:24deg;--r:360">
+    <div class="spoke" style="--angle:39deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:39deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-external)">
         <h3>oppscan.futco.ai</h3>
         <p class="short">cursor-paged ops feed</p>
       </div>
     </div>
-    <div class="ring-label" style="top:6%;left:50%;transform:translateX(-50%);">evidence sources</div>
+    <div class="ring-label" style="top:4%;left:50%;transform:translateX(-50%);">evidence sources</div>
 
     <!-- outer: autonomy guardrails, wrapping Approve & Distribute (angle 205.71) -->
-    <div class="spoke" style="--angle:187deg"><i style="top:-385px;height:175px;"></i></div>
-    <div class="rnode sat" style="--angle:187deg;--r:400">
+    <div class="spoke" style="--angle:181.71deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:181.71deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-corp)">
         <h3>Ad-Spend Mandate</h3>
         <p class="short">circuit breaker + daily spend-ceiling kill switch</p>
       </div>
     </div>
-    <div class="spoke" style="--angle:206deg"><i style="top:-385px;height:175px;"></i></div>
-    <div class="rnode sat" style="--angle:206deg;--r:400">
+    <div class="spoke" style="--angle:205.71deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:205.71deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-corp)">
         <h3>Health Check</h3>
         <p class="short">cron-scheduled; auto-suspend on confirmed breach (off by default)</p>
       </div>
     </div>
-    <div class="spoke" style="--angle:225deg"><i style="top:-385px;height:175px;"></i></div>
-    <div class="rnode sat" style="--angle:225deg;--r:400">
+    <div class="spoke" style="--angle:229.71deg"><i style="top:-385px;height:175px;"></i></div>
+    <div class="rnode sat" style="--angle:229.71deg;--r:400">
       <div class="rnode-inner" style="--repo:var(--repo-corp)">
         <h3>Pause / Resume</h3>
         <p class="short"><code>meta pause-campaign</code> / <code>start-campaign</code></p>
       </div>
     </div>
-    <div class="ring-label" style="bottom:4%;left:8%;">autonomy guardrails</div>
+    <div class="ring-label" style="bottom:3%;left:6%;">autonomy guardrails</div>
 
     <!-- outer: capital mandate <-> e3d-trade, near Measure/Learn boundary -->
     <div class="spoke" style="--angle:282.86deg"><i style="top:-385px;height:175px;"></i></div>
@@ -342,11 +342,11 @@
         <p class="short">tightens risk limits only; outcomes feed back into Measure</p>
       </div>
     </div>
-    <div class="ring-label" style="bottom:24%;right:0;">external governance</div>
+    <div class="ring-label" style="bottom:22%;right:0;">external governance</div>
 
     <!-- outer: X engagement pod, near Produce (angle 154.29) -->
-    <div class="spoke" style="--angle:154.29deg"><i style="top:-395px;height:185px;"></i></div>
-    <div class="xpod" style="--angle:154.29deg;--r:400">
+    <div class="spoke" style="--angle:154.29deg"><i style="top:-425px;height:215px;"></i></div>
+    <div class="xpod" style="--angle:154.29deg;--r:440">
       <div class="xpod-inner">
         <h3>e3d.ai on X — organic channel</h3>
         <p class="xsteps">search → filter → Jev → finding → draft</p>
@@ -354,7 +354,7 @@
         <div class="rbottom"><span class="pill status-partial">Partial</span></div>
       </div>
     </div>
-    <div class="ring-label" style="top:44%;right:0;">parallel loop</div>
+    <div class="ring-label" style="top:46%;right:0;">parallel loop</div>
   </div>
 
   <!-- ============== LINEAR FALLBACK (<1180px) — same content, full detail ============== -->
