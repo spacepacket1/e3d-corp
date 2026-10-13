@@ -1236,7 +1236,7 @@ test('instance config validation accepts researchTopics/scoring and rejects malf
 
 test('futco instance config declares the opportunity.prospect role and real research topics', () => {
   const config = loadInstanceConfig(path.join(ROOT, '.e3d-corp', 'instance', 'futco', 'instance.json'));
-  assert.deepEqual(config.roles['opportunity.prospect'], { provider: 'local' });
+  assert.deepEqual(config.roles['opportunity.prospect'], { provider: 'claude' });
   assert.ok(Array.isArray(config.researchTopics) && config.researchTopics.length > 0);
 });
 
