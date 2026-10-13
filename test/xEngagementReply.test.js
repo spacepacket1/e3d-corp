@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { draftEngagementReply, MAX_REPLY_CHARS } from '../lib/roles/xEngagementReply.js';
+import { draftEngagementReply, MAX_REPLY_CHARS, sanitizeReply } from '../lib/roles/xEngagementReply.js';
 
 const ORIGINAL_ENV = {
   X_REPLY_LLM_BASE_URL: process.env.X_REPLY_LLM_BASE_URL,
@@ -74,6 +74,29 @@ test('draftEngagementReply strips a markdown fence and surrounding whitespace', 
     llmClient: async () => ({ text: '```\n  Worth checking how wallet clustering actually works under the hood.  \n```' })
   });
   assert.equal(result.reply, 'Worth checking how wallet clustering actually works under the hood.');
+});
+
+test('sanitizeReply never truncates a URL in half - drops it entirely rather than leaving a broken fragment', () => {
+  const url = 'https://e3d.ai/stories/00000000-0000-0000-0000-000000000000';
+  const prefix = 'a'.repeat(230);
+  // The URL starts at index 231 and ends at 290, straddling the 240-char cap -
+  // this is the exact live failure: a hard slice(0, 240) landed mid-UUID.
+  const raw = `${prefix} ${url}`;
+  const result = sanitizeReply(raw);
+  assert.ok(result.length <= MAX_REPLY_CHARS);
+  assert.equal(result.includes('https://'), false);
+  assert.equal(result, prefix);
+});
+
+test('sanitizeReply still hard-truncates normally when no URL straddles the cut point', () => {
+  const result = sanitizeReply('b'.repeat(300));
+  assert.equal(result.length, MAX_REPLY_CHARS);
+});
+
+test('sanitizeReply leaves a complete trailing URL untouched when the whole reply already fits', () => {
+  const url = 'https://e3d.ai/stories/00000000-0000-0000-0000-000000000000';
+  const raw = `short reply ${url}`;
+  assert.equal(sanitizeReply(raw), raw);
 });
 
 test('draftEngagementReply requires non-empty postText', async () => {
