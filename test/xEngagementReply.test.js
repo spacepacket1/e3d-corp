@@ -88,6 +88,38 @@ test('draftEngagementReply requires non-empty postText', async () => {
   );
 });
 
+test('draftEngagementReply passes the finding\'s real url through to the model as finding_url', async () => {
+  let capturedUserPrompt = null;
+  await draftEngagementReply({
+    instanceConfig: instanceConfig(),
+    postText: 'what tools do people use for on-chain wallet analytics?',
+    topic: 'on-chain wallet and address analytics',
+    findings: [{ source: 'e3d.ai search_stories', text: 'WALLETX: cluster rotated', url: 'https://e3d.ai/stories/abc-123' }],
+    llmClient: async ({ userPrompt }) => {
+      capturedUserPrompt = userPrompt;
+      return { text: 'null' };
+    }
+  });
+  const parsed = JSON.parse(capturedUserPrompt);
+  assert.equal(parsed.finding_url, 'https://e3d.ai/stories/abc-123');
+});
+
+test('draftEngagementReply sends finding_url as null rather than omitting it when the finding has no url', async () => {
+  let capturedUserPrompt = null;
+  await draftEngagementReply({
+    instanceConfig: instanceConfig(),
+    postText: 'what tools do people use for on-chain wallet analytics?',
+    topic: 'on-chain wallet and address analytics',
+    findings: SAMPLE_FINDINGS,
+    llmClient: async ({ userPrompt }) => {
+      capturedUserPrompt = userPrompt;
+      return { text: 'null' };
+    }
+  });
+  const parsed = JSON.parse(capturedUserPrompt);
+  assert.equal(parsed.finding_url, null);
+});
+
 test('draftEngagementReply throws when roles["x.engagementReply"].provider is missing', async () => {
   await assert.rejects(
     draftEngagementReply({

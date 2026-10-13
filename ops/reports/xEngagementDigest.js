@@ -37,6 +37,7 @@ function buildTextBody(drafts) {
       `${index + 1}. ${tweetUrl}`,
       `   Topic: ${matchedTopic ?? 'unknown'}`,
       `   Finding (${finding?.source ?? 'e3d.ai'}): ${finding?.text ?? 'n/a'}`,
+      ...(finding?.url ? [`   Finding link: ${finding.url}`] : []),
       `   Original: "${postText}"`,
       `   DRAFT: ${draftReply}`,
       ''
@@ -52,7 +53,7 @@ function buildHtmlBody(drafts) {
     <div style="margin:0 0 22px;padding:14px 16px;border:1px solid #e0e0e4;border-radius:8px;">
       <p style="margin:0 0 6px;"><a href="${escapeHtml(draft.payload.tweetUrl)}" style="color:#2952cc;">${escapeHtml(draft.payload.tweetUrl)}</a></p>
       <p style="margin:0 0 6px;color:#666;font-size:13px;">Topic: ${escapeHtml(draft.payload.matchedTopic ?? 'unknown')}</p>
-      <p style="margin:0 0 6px;color:#666;font-size:13px;">Finding (${escapeHtml(draft.payload.finding?.source ?? 'e3d.ai')}): ${escapeHtml(draft.payload.finding?.text ?? 'n/a')}</p>
+      <p style="margin:0 0 6px;color:#666;font-size:13px;">Finding (${escapeHtml(draft.payload.finding?.source ?? 'e3d.ai')}): ${escapeHtml(draft.payload.finding?.text ?? 'n/a')}${draft.payload.finding?.url ? ` &mdash; <a href="${escapeHtml(draft.payload.finding.url)}" style="color:#2952cc;">${escapeHtml(draft.payload.finding.url)}</a>` : ''}</p>
       <p style="margin:0 0 10px;color:#444;font-size:13px;">Original: &ldquo;${escapeHtml(draft.payload.postText)}&rdquo;</p>
       <p style="margin:0;padding:10px 12px;background:#f4f4f6;border-radius:6px;font-weight:600;">${escapeHtml(draft.payload.draftReply)}</p>
     </div>`

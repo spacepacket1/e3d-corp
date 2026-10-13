@@ -162,6 +162,47 @@ test('gatherFindings returns no findings once every real result has already been
   assert.deepEqual(result.findings, []);
 });
 
+test('gatherFindings builds a real deep link to the specific story, not the e3d.ai homepage', async () => {
+  const callMcp = async (toolName) => {
+    if (toolName === 'search_stories') {
+      return toolJsonResult([
+        { id: 'd20389cb-3774-4fbb-9401-f84365f33457', symbol: 'BTC', headline: 'is +99.8% more expensive on SOL than ETH' }
+      ]);
+    }
+    throw new Error('unexpected tool call');
+  };
+
+  const result = await gatherFindings({ topic: 'token prices', callMcp });
+  assert.equal(result.findings[0].url, 'https://e3d.ai/stories/d20389cb-3774-4fbb-9401-f84365f33457');
+});
+
+test('gatherFindings builds a real deep link to the specific thesis, not the e3d.ai homepage', async () => {
+  const callMcp = async (toolName) => {
+    if (toolName === 'search_stories') return toolJsonResult([]);
+    if (toolName === 'get_theses') {
+      return toolJsonResult([
+        { id: 'f087aa0b-9067-4f40-940c-953e87d9dd78', symbol: 'ETHFI', direction: 'AVOID', conviction: 0.75, thesis_text: 'late-crowding stage' }
+      ]);
+    }
+    throw new Error('unexpected tool call');
+  };
+
+  const result = await gatherFindings({ topic: 'AI trading agents', callMcp });
+  assert.equal(result.findings[0].url, 'https://e3d.ai/thesis?thesisId=f087aa0b-9067-4f40-940c-953e87d9dd78');
+});
+
+test('gatherFindings leaves url null rather than falling back to a generic link when the tool result has no id', async () => {
+  const callMcp = async (toolName) => {
+    if (toolName === 'search_stories') {
+      return toolJsonResult([{ symbol: 'WALLETX', headline: 'cluster of 40 wallets rotated into the same token within an hour' }]);
+    }
+    throw new Error('unexpected tool call');
+  };
+
+  const result = await gatherFindings({ topic: 'on-chain wallet and address analytics', callMcp });
+  assert.equal(result.findings[0].url, null);
+});
+
 test('gatherFindings fails closed when e3d-mcp is unavailable', async () => {
   const callMcp = async (toolName) => {
     if (toolName === 'search_stories') throw new Error('stories tool down');
