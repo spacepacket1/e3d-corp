@@ -1,0 +1,30 @@
+[
+  {
+    "business": {
+      "id": "example-01",
+      "name": "Example Precision Heating & Air (NOT A REAL BUSINESS)",
+      "website": "https://example.com",
+      "location": "Sacramento, CA"
+    },
+    "rawResearch": {
+      "websiteText": "Family-owned since 2011. Residential and light commercial HVAC. No online scheduling or quote form - phone number only, no stated after-hours line.",
+      "googleBusinessProfile": "4.3 stars, 61 reviews. Most recent owner reply to a review was 7 months ago.",
+      "adActivityNotes": "Running Google Search ads for \"emergency AC repair [city]\" as of this week.",
+      "otherNotes": "LinkedIn shows 9 employees. Owner (John Smith) listed as a local Rotary member."
+    }
+  },
+  {
+    "business": {
+      "id": "example-02",
+      "name": "Example Rapid Plumbing Co (NOT A REAL BUSINESS)",
+      "website": "https://example.org",
+      "location": "Roseville, CA"
+    },
+    "rawResearch": {
+      "websiteText": "Online booking widget on every page, same-day scheduling shown live. Membership plan advertised on the homepage.",
+      "googleBusinessProfile": "4.8 stars, 340 reviews, owner replies to nearly every review within a day.",
+      "adActivityNotes": "No paid search or social ads found.",
+      "otherNotes": "Appears to already run a mature marketing operation - likely a poor fit (too little visible leak)."
+    }
+  }
+]
