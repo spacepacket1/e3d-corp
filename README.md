@@ -333,4 +333,4 @@ Phase 11 as originally specified — CRM, ledger, and a bookkeeper role — rema
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE) © 2026 FutCo LLC. Part of the [FutCo](https://futco.ai/projects) open-source ecosystem.
