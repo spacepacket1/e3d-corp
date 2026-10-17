@@ -209,3 +209,13 @@ test('client-from-config prefers the env var key, then the key file, then OAuth,
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('a network failure never puts the API key into the error message', async () => {
+  const { createYoutubeClient } = await import('../lib/research/youtubeApi.js');
+  const secret = 'AIzaSySECRETKEY123';
+  const client = createYoutubeClient({
+    baseUrl: 'http://127.0.0.1:1', apiKey: secret,
+    fetchImpl: async (url) => { throw new Error(`connect ECONNREFUSED ${url}`); }
+  });
+  await assert.rejects(client.getChannelUploadsPlaylistId('UC'), (error) => error.kind === 'network' && !error.message.includes(secret) && /redacted/.test(error.message));
+});
