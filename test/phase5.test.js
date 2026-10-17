@@ -1,3 +1,4 @@
+import { ACTION_POLICY_VERSION } from '../lib/authority/policy.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -120,7 +121,7 @@ test('assertProposalAuthorized refuses a pending proposal and passes an approved
     assert.throws(() => assertProposalAuthorized(proposal, 'issue-invoice'), /expected "issue-invoice"/);
     assert.throws(
       () => assertProposalAuthorized({ ...proposal, status: 'approved', authorityLevel: 3 }, 'send-outreach'),
-      /policy v6 requires 2/
+      new RegExp(`policy v${ACTION_POLICY_VERSION} requires 2`)
     );
 
     const approved = { ...proposal, status: 'approved' };

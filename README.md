@@ -317,6 +317,10 @@ A separate acquisition channel for e3d.ai: `ops/reports/runXEngagement.js` searc
 
 As of this writing there are no live X API credentials configured (`research.x.bearerTokenEnvVar` in the instance config is unset), so this pipeline is wired and tested but not yet running against real data.
 
+## YouTube channel monitor (read-only sampling, human-approved edits)
+
+`e3d-corp youtube sample|scan|report|propose|apply|rollback|measure|poll` watches a YouTube channel through the Data API (API key, no OAuth for monitoring), turns stalled/breakout/new-comment signals into scored Opportunities, drafts audience copy and a title/description/tags change, and edits a video only after a human approves the level-2 `youtube-metadata-change` proposal. It then measures views/day before vs after against the channel's other videos, with the caveats stated. Setup, formulas, quota and limits: [docs/youtube-monitor.md](docs/youtube-monitor.md).
+
 ## Status
 
 Phases 1–10 are implemented: runtime foundation, event store, research layer, opportunity engine, authority and decision framework, web UI, pursuit and outreach, the e3d-pilot handoff, outcome and experience capture, and evaluation.
