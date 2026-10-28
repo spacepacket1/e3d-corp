@@ -14,13 +14,15 @@
 // (skipped with no LLM call if there's no finding) -> queue.
 
 import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { loadGrowthFacts } from '../../lib/pilot/growthFacts.js';
 import { loadInstance } from '../../lib/config.js';
 import { createResearchAdapter } from '../../lib/research/adapter.js';
 import { queryEvents, appendEvent } from '../../lib/events/store.js';
 import { isLikelySpam, hasEnoughEngagement, DEFAULT_MIN_ENGAGEMENT } from '../../lib/research/xSpamFilter.js';
 import { checkPostRelevance } from '../../lib/research/jevRelevance.js';
 import { gatherFindings } from '../../lib/research/e3dFindings.js';
-import { draftEngagementReply } from '../../lib/roles/xEngagementReply.js';
+import { draftEngagementReply, draftPilotEngagementReply } from '../../lib/roles/xEngagementReply.js';
 
 const DEFAULT_DRAFTS_PER_RUN = 5;
 const DEFAULT_MAX_RESULTS_PER_QUERY = 10;
@@ -37,29 +39,50 @@ function alreadyQueuedIds(dataDir) {
   return new Set(queryEvents(dataDir, { type: 'x.draftQueued' }).map((event) => event.subject.id));
 }
 
-async function main() {
-  const instanceName = process.argv.includes('--instance')
-    ? process.argv[process.argv.indexOf('--instance') + 1]
-    : 'futco';
+export const GROUNDINGS = ['pilot', 'e3d-findings'];
 
-  const { config, dataDir } = loadInstance(instanceName);
+// Unset keeps the original e3d-findings behaviour; the Pilot migration sets
+// research.x.grounding = 'pilot' explicitly.
+export function resolveGrounding(xConfig) {
+  const value = xConfig?.grounding ?? 'e3d-findings';
+  if (!GROUNDINGS.includes(value)) throw new Error(`research.x.grounding must be one of ${GROUNDINGS.join(', ')}`);
+  return value;
+}
 
+export async function runXEngagement({
+  config,
+  dataDir,
+  env = process.env,
+  researchAdapter = createResearchAdapter(config, { dataDir }),
+  relevanceCheck = checkPostRelevance,
+  findingsGatherer = gatherFindings,
+  llmClient,
+  log = (line) => process.stdout.write(`${line}\n`),
+  warn = (line) => process.stderr.write(`${line}\n`)
+} = {}) {
   const xConfig = config.research?.x;
   if (!xConfig) {
     throw new Error('Instance config has no "research.x" configured');
   }
+  const grounding = resolveGrounding(xConfig);
 
-  const bearerToken = process.env[xConfig.bearerTokenEnvVar];
+  const bearerToken = env[xConfig.bearerTokenEnvVar];
   // Fallback credentials: lib/research/xSearchClient.js derives an app-only
   // bearer in memory from the OAuth1 consumer pair when the bearer is missing or 401s.
-  const consumerKey = process.env.X_OAUTH1_CONSUMER_KEY;
-  const consumerSecret = process.env.X_OAUTH1_CONSUMER_SECRET;
+  const consumerKey = env.X_OAUTH1_CONSUMER_KEY;
+  const consumerSecret = env.X_OAUTH1_CONSUMER_SECRET;
   if (!bearerToken && !(consumerKey && consumerSecret)) {
     throw new Error(`Env var "${xConfig.bearerTokenEnvVar}" (research.x.bearerTokenEnvVar) is not set, and no X_OAUTH1_CONSUMER_KEY/SECRET fallback`);
   }
 
+  let pilotFacts = null;
+  if (grounding === 'pilot') {
+    const loaded = loadGrowthFacts(config);
+    loaded.warnings.forEach((w) => warn(`warning: ${w}`));
+    pilotFacts = loaded.facts;
+  }
+
   const draftsPerRun = xConfig.draftsPerRun ?? DEFAULT_DRAFTS_PER_RUN;
-  const researchAdapter = createResearchAdapter(config, { dataDir });
   const queuedIds = alreadyQueuedIds(dataDir);
 
   let draftsQueued = 0;
@@ -77,7 +100,7 @@ async function main() {
       maxResults: DEFAULT_MAX_RESULTS_PER_QUERY
     });
     if (searchResult.status !== 'ok') {
-      process.stderr.write(`X search degraded for "${query}": ${searchResult.reason ?? searchResult.summary}\n`);
+      warn(`X search degraded for "${query}": ${searchResult.reason ?? searchResult.summary}`);
       continue;
     }
 
@@ -92,26 +115,35 @@ async function main() {
       const engagementCheck = hasEnoughEngagement(tweet, xConfig.minEngagement ?? DEFAULT_MIN_ENGAGEMENT);
       if (!engagementCheck.enough) continue;
 
-      const relevance = await checkPostRelevance({ text: tweet.text, topics: xConfig.topics });
+      const relevance = await relevanceCheck({ text: tweet.text, topics: xConfig.topics });
       if (!relevance.relevant) continue;
 
       const topicText = resolveMatchedTopicText(relevance.matchedTopic, xConfig.topics);
-      const findingsResult = await gatherFindings({
-        topic: topicText,
-        postText: tweet.text,
-        serverPath: xConfig.e3dMcpServerPath,
-        excludeFindingTexts: usedFindingTexts
-      });
-      if (findingsResult.findings.length === 0) continue;
-      usedFindingTexts.add(findingsResult.findings[0].text);
-
-      const draft = await draftEngagementReply({
-        instanceConfig: config,
-        postText: tweet.text,
-        topic: topicText,
-        findings: findingsResult.findings
-      });
-      if (!draft.reply) continue;
+      let draft;
+      let finding;
+      if (grounding === 'pilot') {
+        draft = await draftPilotEngagementReply({ instanceConfig: config, postText: tweet.text, topic: topicText, facts: pilotFacts, llmClient });
+        if (!draft.reply) continue;
+        finding = { source: `pilot facts: ${draft.citedFacts.join(', ')}`, text: draft.citedFactTexts.join(' | '), factIds: draft.citedFacts };
+      } else {
+        const findingsResult = await findingsGatherer({
+          topic: topicText,
+          postText: tweet.text,
+          serverPath: xConfig.e3dMcpServerPath,
+          excludeFindingTexts: usedFindingTexts
+        });
+        if (findingsResult.findings.length === 0) continue;
+        usedFindingTexts.add(findingsResult.findings[0].text);
+        draft = await draftEngagementReply({
+          instanceConfig: config,
+          postText: tweet.text,
+          topic: topicText,
+          findings: findingsResult.findings,
+          llmClient
+        });
+        if (!draft.reply) continue;
+        finding = findingsResult.findings[0];
+      }
 
       appendEvent(dataDir, {
         type: 'x.draftQueued',
@@ -122,22 +154,34 @@ async function main() {
           tweetUrl: `https://twitter.com/i/web/status/${tweet.id}`,
           postText: tweet.text,
           matchedTopic: topicText,
-          finding: findingsResult.findings[0],
+          finding,
           draftReply: draft.reply,
-          searchQuery: query
+          searchQuery: query,
+          grounding
         },
         correlationId: crypto.randomUUID()
       });
       queuedIds.add(tweet.id);
       draftsQueued += 1;
-      process.stdout.write(`Queued draft for tweet ${tweet.id} (topic: ${topicText})\n`);
+      log(`Queued draft for tweet ${tweet.id} (topic: ${topicText})`);
     }
   }
 
-  process.stdout.write(`X engagement run complete: ${candidatesSeen} candidate(s) seen, ${draftsQueued} draft(s) queued.\n`);
+  log(`X engagement run complete: ${candidatesSeen} candidate(s) seen, ${draftsQueued} draft(s) queued.`);
+  return { candidatesSeen, draftsQueued, grounding };
 }
 
-main().catch((error) => {
-  process.stderr.write(`X engagement run failed: ${error.message}\n`);
-  process.exitCode = 1;
-});
+async function main() {
+  const instanceName = process.argv.includes('--instance')
+    ? process.argv[process.argv.indexOf('--instance') + 1]
+    : 'futco';
+  const { config, dataDir } = loadInstance(instanceName);
+  await runXEngagement({ config, dataDir });
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    process.stderr.write(`X engagement run failed: ${error.message}\n`);
+    process.exitCode = 1;
+  });
+}

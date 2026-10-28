@@ -16,6 +16,7 @@ export function summarizeChange(before, after) {
   lines.push(`researchTopics: ${count(before.researchTopics)} -> ${count(after.researchTopics)} (old ones archived: ${count(after.archived?.researchTopics)})`);
   lines.push(`research.x.searchQueries: ${count(before.research?.x?.searchQueries)} -> ${count(after.research?.x?.searchQueries)}`);
   lines.push(`research.x.topics: ${count(before.research?.x?.topics)} -> ${count(after.research?.x?.topics)}`);
+  lines.push(`research.x.grounding: ${before.research?.x?.grounding ?? '(unset = e3d-findings)'} -> ${after.research?.x?.grounding ?? '(no research.x)'}`);
   lines.push(`scoring.typeWeights: ${Object.keys(before.scoring?.typeWeights ?? {}).join(',') || '(none)'} -> ${Object.keys(after.scoring.typeWeights).join(',')}`);
   lines.push(`ownDomains: ${(before.ownDomains ?? []).join(',')} -> ${after.ownDomains.join(',')}`);
   lines.push(`new roles: ${Object.keys(after.roles).filter((r) => !(r in (before.roles ?? {}))).join(', ') || '(none)'}`);
