@@ -27,7 +27,7 @@ The owner posts video natively himself; these actions are text and link posts on
 
 ## How the owner approves
 
-Same as any proposal: the e3d-corp web UI (`run-futco-web.sh`) or `e3d-corp proposals`/`decide` CLI. Approving an `x-post` or `linkedin-post` posts immediately. Approving a `pilot-ad-campaign` only records the decision.
+Same as any proposal: the e3d-corp web UI (`run-futco-web.sh`) or the e3d-corp CLI decide command (see `e3d-corp help`). Approving an `x-post` or `linkedin-post` posts immediately. Approving a `pilot-ad-campaign` only records the decision.
 
 ## Credentials (names only)
 
