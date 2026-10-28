@@ -313,6 +313,7 @@ test('runPilotContent queues pending proposals only (nothing posted), skips dupl
   const s = setupDir();
   try {
     const config = migrateConfigToPilot(legacy());
+    config.pilotGrowth.factsFile = path.join(s.dataDir, 'no-facts.json'); // never the live instance's pilot-facts.json
     process.env.K = 'test-key-not-real';
     const llmClient = async ({ systemPrompt }) => ({
       text: systemPrompt.includes('ad copy')
