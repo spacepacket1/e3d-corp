@@ -50,8 +50,12 @@ async function main() {
   }
 
   const bearerToken = process.env[xConfig.bearerTokenEnvVar];
-  if (!bearerToken) {
-    throw new Error(`Env var "${xConfig.bearerTokenEnvVar}" (research.x.bearerTokenEnvVar) is not set`);
+  // Fallback credentials: lib/research/xSearchClient.js derives an app-only
+  // bearer in memory from the OAuth1 consumer pair when the bearer is missing or 401s.
+  const consumerKey = process.env.X_OAUTH1_CONSUMER_KEY;
+  const consumerSecret = process.env.X_OAUTH1_CONSUMER_SECRET;
+  if (!bearerToken && !(consumerKey && consumerSecret)) {
+    throw new Error(`Env var "${xConfig.bearerTokenEnvVar}" (research.x.bearerTokenEnvVar) is not set, and no X_OAUTH1_CONSUMER_KEY/SECRET fallback`);
   }
 
   const draftsPerRun = xConfig.draftsPerRun ?? DEFAULT_DRAFTS_PER_RUN;
@@ -67,6 +71,8 @@ async function main() {
 
     const searchResult = await researchAdapter.pullXSearch({
       bearerToken,
+      consumerKey,
+      consumerSecret,
       query,
       maxResults: DEFAULT_MAX_RESULTS_PER_QUERY
     });

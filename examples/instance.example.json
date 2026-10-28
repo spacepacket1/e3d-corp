@@ -38,7 +38,31 @@
         }
       ],
       "opportunitySignalRules": [
-        { "metric": "cost_per_landing_page_view", "window_days": 7, "degradation_pct": 0.3 }
+        {
+          "metric": "cost_per_landing_page_view",
+          "window_days": 7,
+          "degradation_pct": 0.3
+        }
+      ]
+    },
+    "x": {
+      "bearerTokenEnvVar": "EXAMPLECO_X_SEARCH_BEARER_TOKEN",
+      "draftsPerRun": 5,
+      "minEngagement": 6,
+      "searchQueries": [
+        "(\"multiple LLMs\" OR \"multiple AI models\" OR \"several AI models\") (\"second opinion\" OR compare) -is:retweet lang:en",
+        "(ChatGPT OR Claude OR Gemini) \"which model\" (disagree OR compare OR \"different answers\") -is:retweet lang:en",
+        "(\"LLM council\" OR \"model council\" OR \"AI debate\" OR \"multi-model\") -is:retweet lang:en",
+        "(\"MCP server\" OR \"MCP servers\") (agent OR agents) -is:retweet lang:en",
+        "(\"ChatGPT apps\" OR \"ChatGPT app directory\" OR \"apps in ChatGPT\") -is:retweet lang:en",
+        "(\"AI decision making\" OR \"decision with AI\" OR \"AI second opinion\") -is:retweet lang:en"
+      ],
+      "topics": [
+        "comparing answers from several AI models, or asking which model to trust",
+        "wanting a second opinion from multiple AI models before a decision",
+        "agent builders and MCP servers: giving an agent a check on its own decisions",
+        "ChatGPT apps / app directory and MCP directory distribution",
+        "AI-assisted decision making, recorded reasoning and audit trails"
       ]
     }
   },
@@ -80,6 +104,15 @@
     },
     "creative.brief": {
       "provider": "local"
+    },
+    "pilot.contentDraft": {
+      "provider": "local"
+    },
+    "pilot.adCopy": {
+      "provider": "local"
+    },
+    "pilot.competitorBrief": {
+      "provider": "local"
     }
   },
   "outreach": {
@@ -99,10 +132,18 @@
     "tokenEnvVar": "EXAMPLECO_E3D_TRADE_OUTCOME_TOKEN"
   },
   "researchTopics": [
-    "domains or trends worth a scheduled discovery pass, e.g. \"AI utilities for technical businesses\""
+    "multi-model LLM comparison: tools, workflows and demand for getting answers from several frontier AI models and seeing where they disagree",
+    "getting a second opinion from multiple AI models before a decision (developers, founders, managers, analysts)",
+    "agent builders who need a check on an agent's decision: MCP servers and tools that let an agent call a multi-model debate",
+    "MCP server directories and registries: listings, discovery and distribution opportunities for Pilot",
+    "ChatGPT apps and the ChatGPT app directory: distribution, review process and integration opportunities",
+    "AI decision-making and decision-record tooling: audit trails, transcripts and recorded disagreement between models",
+    "competitor and adjacent products: LLM council, model-debate and multi-model answer tools, pricing and positioning",
+    "product feedback and marketing channels where developers who use several AI models gather (communities, newsletters, directories)"
   ],
   "ownDomains": [
-    "example.com"
+    "example.com",
+    "pilot.e3d.ai"
   ],
   "scoring": {
     "weights": {
@@ -111,7 +152,12 @@
       "recency": 0.15
     },
     "typeWeights": {
-      "consulting-engagement": 1.2
+      "distribution": 1.3,
+      "marketing": 1.25,
+      "product-feedback": 1.25,
+      "integration-opportunity": 1.15,
+      "competitor-development": 1.1,
+      "partnership": 1.05
     }
   },
   "web": {
@@ -126,5 +172,14 @@
   "anchor": {
     "provider": "email",
     "toEmailEnvVar": "EXAMPLECO_ANCHOR_TO_EMAIL"
+  },
+  "pilotGrowth": {
+    "dryRun": false,
+    "draftsPerWeek": 4,
+    "adMonthlyCeilingUsd": 300,
+    "factsFile": ".e3d-corp/instance/example/pilot-facts.json"
+  },
+  "archived": {
+    "note": "Previous topics/weights are kept here by ops/migrate-instance-to-pilot.js; the example ships none."
   }
 }

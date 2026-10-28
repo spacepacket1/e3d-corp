@@ -39,7 +39,7 @@ async function seed(dataDir) {
 }
 
 test('policy v8: pilot-retention-nudge is level 2', () => {
-  assert.equal(ACTION_POLICY_VERSION, 8);
+  assert.equal(ACTION_POLICY_VERSION, 9);
   assert.equal(ACTION_POLICY['pilot-retention-nudge'], 2);
 });
 
