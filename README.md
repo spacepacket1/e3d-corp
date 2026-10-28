@@ -72,7 +72,7 @@ Levels are defined once, in full, so adding a higher-consequence action later ca
 
 Levels 0–1 never produce a Proposal at all. Levels 2–4 always do, and the mapping from action type to required level lives in one versioned table. An action type with no policy entry is refused rather than treated as autonomous — the failure mode is "nothing happens," never "it happened unsupervised."
 
-Today `send-outreach` and `pilot-handoff` have registered executors. `issue-invoice` and `mark-deal-closed` have policy entries but no executor yet: the guard exists ahead of the capability, deliberately.
+Today `send-outreach`, `pilot-handoff` and `pilot-retention-nudge` (a recorded no-op handoff, see [docs/pilot-monitor.md](docs/pilot-monitor.md)) have registered executors, alongside the YouTube and Meta ones. `issue-invoice` and `mark-deal-closed` have policy entries but no executor yet: the guard exists ahead of the capability, deliberately.
 
 ## An Opportunity is not a sales lead
 

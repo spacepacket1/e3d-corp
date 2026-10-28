@@ -46,8 +46,8 @@ const propose = (dataDir, instanceConfig, overrides = {}) => proposeYoutubeMetad
   instanceConfig, ...overrides
 }).proposal;
 
-test('policy v7 lists youtube-metadata-change at level 2, and the draft types are not in the table', () => {
-  assert.equal(ACTION_POLICY_VERSION, 7);
+test('policy v8 lists youtube-metadata-change at level 2, and the draft types are not in the table', () => {
+  assert.equal(ACTION_POLICY_VERSION, 8);
   assert.equal(ACTION_POLICY['youtube-metadata-change'], 2);
   assert.equal(ACTION_POLICY['youtube-audience-copy-draft'], undefined);
   assert.equal(ACTION_POLICY['youtube-comment-reply-draft'], undefined);
