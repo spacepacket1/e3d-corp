@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-28T12:00:00.000Z",
+  "windowHours": 24,
+  "funnel": { "signupsTotal": 240, "signupsWindow": 3, "signups7d": 12, "verifiedTotal": 120, "starterGrantedTotal": 118, "firstDebateTotal": 70, "firstDebateWindow": 2, "purchasedTotal": 1, "subscribedTotal": 1 },
+  "usage": { "debatesWindow": 4, "debates7d": 30, "creditsSpentWindow": 40, "creditsSpent7d": 310, "refusalsWindow": { "insufficient_credits": 7, "rate_limited": 1 }, "errorsWindow": 4 },
+  "revenue": { "packsSoldWindow": 0, "packsRevenueUsdWindow": 0, "packsRevenueUsd7d": 25, "plansActive": { "basic": 1, "pro": 0, "monthly": 1, "annual": 0 }, "mrrUsd": 25, "refundsWindow": 0, "disputesOpen": 1, "frozenSubscriptions": 0 },
+  "cohorts": { "signedUpNoDebate7d": 9, "outOfCredits": 6, "nearAllowance": 0, "paymentFailed": 2, "starterExpiringSoon": 4 },
+  "health": { "billingAlarms": ["webhook signature failures: 3"], "lastWebhookAgeMinutes": 700, "lastDebateAgeMinutes": 35 },
+  "notes": ["fixture"]
+}

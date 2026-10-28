@@ -7,6 +7,8 @@
 
 import { loadInstance } from '../../lib/config.js';
 import { createResearchAdapter } from '../../lib/research/adapter.js';
+import { isPilotConfigured } from '../../lib/pilot/config.js';
+import { recordPilotRevenueOutcome } from '../../lib/pilot/revenue.js';
 
 async function main() {
   const instanceName = process.argv.includes('--instance')
@@ -14,6 +16,15 @@ async function main() {
     : 'futco';
 
   const { config, dataDir } = loadInstance(instanceName);
+
+  // e3d-corp never holds a Stripe secret key (that poll could only fail with STRIPE_SECRET_KEY unset). Once the Pilot
+  // monitor is configured, revenue comes from the aggregate pilot.metrics sample instead, so this entry point derives
+  // the revenue Outcome from the latest sample, exits 0, and never touches Stripe. See docs/pilot-monitor.md.
+  if (isPilotConfigured(config)) {
+    const result = recordPilotRevenueOutcome(dataDir);
+    process.stdout.write(`Stripe poll superseded by pilot.metrics: ${result.recorded ? `recorded ${result.outcome.id}` : (result.reason ?? 'already recorded')}\n`);
+    return;
+  }
 
   const stripe = config.research?.stripe;
   if (!stripe) {

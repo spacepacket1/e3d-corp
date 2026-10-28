@@ -11,6 +11,9 @@ import { listOpportunities } from '../../lib/opportunities/store.js';
 import { listProposals } from '../../lib/proposals/store.js';
 import { computeMetrics } from '../../lib/evaluation/metrics.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
+import { isPilotConfigured } from '../../lib/pilot/config.js';
+import { buildPilotSummary, formatPilotSummaryText } from '../../lib/pilot/summary.js';
+import { renderPilotDigestHtml } from '../../lib/pilot/digestHtml.js';
 
 // A degraded evidence pull (bad token, disabled feed, API outage) otherwise
 // fails silently into a cron log nobody's watching - one entry per source,
@@ -61,14 +64,14 @@ function formatOpportunityTextEntry(opportunity, index) {
 }
 
 function formatProposalTextEntry(proposal, index) {
-  const label = proposal.payload?.subject ?? proposal.payload?.opportunityTitle ?? '(untitled)';
+  const label = proposal.payload?.subject ?? proposal.payload?.opportunityTitle ?? proposal.payload?.rationale ?? '(untitled)';
   return [
     `${index + 1}. [level ${proposal.authorityLevel}] ${proposal.type}: ${label}`,
     `   proposed by ${proposal.proposedBy?.role ?? 'unknown'} - id ${shortId(proposal.id)}`
   ].join('\n');
 }
 
-function buildTextBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence }) {
+function buildTextBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence, pilot }) {
   const lines = [];
   lines.push(`FutCo daily digest - ${instanceName} - ${dateLabel}`);
   lines.push('');
@@ -94,6 +97,12 @@ function buildTextBody({ instanceName, dateLabel, newOpportunities, pendingPropo
     pendingProposals.length === 0 ? '(none pending)' : pendingProposals.map(formatProposalTextEntry).join('\n')
   );
   lines.push('');
+
+  if (pilot) {
+    lines.push(...section('PILOT (pilot.e3d.ai)'));
+    lines.push(...formatPilotSummaryText(pilot));
+    lines.push('');
+  }
 
   lines.push(...section('CUMULATIVE METRICS'));
   lines.push(`Opportunities discovered: ${metrics.opportunitiesDiscovered.total}`);
@@ -172,7 +181,7 @@ function proposalsTableHtml(pendingProposals) {
   }
   const rows = pendingProposals.map((proposal) => [
     `<td style="${TD_NUM}">${escapeHtml(proposal.authorityLevel)}</td>`,
-    `<td style="${TD}">${escapeHtml(proposal.payload?.subject ?? proposal.payload?.opportunityTitle ?? '(untitled)')}</td>`,
+    `<td style="${TD}">${escapeHtml(proposal.payload?.subject ?? proposal.payload?.opportunityTitle ?? proposal.payload?.rationale ?? '(untitled)')}</td>`,
     `<td style="${TD}">${escapeHtml(proposal.type)}</td>`,
     `<td style="${TD}">${escapeHtml(proposal.proposedBy?.role ?? 'unknown')}</td>`,
     `<td style="${TD_ID}">${escapeHtml(shortId(proposal.id))}</td>`
@@ -234,7 +243,7 @@ function metricsByTypeTableHtml(metrics) {
   );
 }
 
-function buildHtmlBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence }) {
+function buildHtmlBody({ instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence, pilot }) {
   const degradedSectionHtml =
     degradedEvidence.length > 0
       ? `
@@ -252,6 +261,7 @@ ${degradedSectionHtml}
   <h2 style="${H2}">Pending proposals &mdash; awaiting your decision (${pendingProposals.length})</h2>
   ${proposalsTableHtml(pendingProposals)}
 
+${pilot ? `  <h2 style="${H2}">Pilot (pilot.e3d.ai)</h2>\n  ${renderPilotDigestHtml(pilot)}\n` : ''}
   <h2 style="${H2}">Cumulative metrics</h2>
   ${metricsSummaryTableHtml(metrics)}
 
@@ -290,7 +300,8 @@ async function main() {
   const now = new Date();
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-  const context = { instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence };
+  const pilot = isPilotConfigured(config) ? buildPilotSummary(dataDir) : null;
+  const context = { instanceName, dateLabel, newOpportunities, pendingProposals, metrics, degradedEvidence, pilot };
   const body = buildTextBody(context);
   const htmlBody = buildHtmlBody(context);
   const degradedSuffix = degradedEvidence.length > 0 ? `, ${degradedEvidence.length} evidence pull(s) degraded` : '';

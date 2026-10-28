@@ -14,6 +14,13 @@
     "knowledgeBaseMcpUrl": "http://127.0.0.1:4110",
     "webSearchProvider": "example-search",
     "webSearchApiKeyEnvVar": "EXAMPLECO_WEB_SEARCH_API_KEY",
+    "pilot": {
+      "sshHost": "pilot.example.com",
+      "sshKeyFile": "/home/example/.ssh/pilot-metrics-readonly",
+      "remoteCommand": "node /srv/pilot/ops/pilot-metrics.js --window-hours 24",
+      "windowHours": 24,
+      "minPollIntervalMinutes": 25
+    },
     "stripe": {
       "apiKeyEnvVar": "EXAMPLECO_STRIPE_SECRET_KEY",
       "lookbackDays": 14
@@ -63,6 +70,9 @@
       "provider": "local"
     },
     "opportunity.communicator": {
+      "provider": "local"
+    },
+    "pilot.retentionCopy": {
       "provider": "local"
     },
     "risk.assess": {
