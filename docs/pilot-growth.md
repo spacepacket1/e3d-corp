@@ -41,7 +41,16 @@ Live now (verified): X search with the derived bearer (read-only probe returned 
 
 ## Config transition
 
-`node ops/migrate-instance-to-pilot.js --instance futco` is a dry run (prints the change summary). `--apply` backs up `instance.json` to `instance.json.pre-pilot.<timestamp>.bak` and writes the new config. Old crypto/oppscan/consulting topics, X queries and type weights are kept under `archived`. Note: `x.engagementReply` still grounds replies in e3d.ai crypto findings (`lib/research/e3dFindings.js`), so with Pilot queries it will find no findings and queue no reply drafts until that role is regrounded in Pilot facts.
+`node ops/migrate-instance-to-pilot.js --instance futco` is a dry run (prints the change summary). `--apply` backs up `instance.json` to `instance.json.pre-pilot.<timestamp>.bak` and writes the new config. Old crypto/oppscan/consulting topics, X queries and type weights are kept under `archived`. The migration also sets `research.x.grounding = 'pilot'` (idempotent).
+
+## X reply drafts (`x.engagementReply`)
+
+`ops/reports/runXEngagement.js` searches X, then applies the existing safeguards (`lib/research/xSpamFilter.js`, `minEngagement`, Jev relevance, `draftsPerRun`, dedupe on already-queued tweets) before drafting. What grounds the draft is `research.x.grounding`:
+
+- `pilot` (set by the migration): the role gets the Pilot facts (`lib/pilot/growthFacts.js` plus `pilotGrowth.factsFile`) and returns JSON `{reply, citedFacts, reason}`, or `reply: null` to decline. Replies are validated with the same checks as content drafts: must cite supplied fact ids, no overclaims, no "multi-LLM", no "plugin live", no URLs outside the facts, at most 280 characters, and pilot.e3d.ai at most once (the prompt allows it only when directly relevant). Anything failing is dropped silently, not queued.
+- `e3d-findings` (the default when unset): the old behaviour, grounded in e3d.ai crypto findings via `research.x.e3dMcpServerPath`.
+
+Either way the result is only an `x.draftQueued` event (payload now includes `grounding`; for `pilot`, `finding` holds the cited fact ids and texts) that appears in the owner's digest email. Nothing posts: the owner approves a reply through the existing `x-post` action (reply-to support).
 
 ## Cron
 
