@@ -80,6 +80,7 @@ A baseline means the sample taken about 7 days earlier (within 12h); if there is
 | Refusal spike (`pilot-refusal-spike`) | refusals >= 5 and >= 20% of attempts | 24h |
 | Webhook silence (`pilot-webhook-silence`) | `lastWebhookAgeMinutes` >= 360 while debates7d > 0 | 24h |
 | Billing alarm (`pilot-billing-alarm`) | `health.billingAlarms` not empty (a different alarm set is a new condition) | 24h |
+| Chat health (`pilot-chat-health`) | `health.chat` (null where the chat host pieces are not installed) has `serverUp` or `botUp` false, or `backupAgeHours` / `purgeAgeHours` >= 36 (null ages are "not reported yet", never a problem); a different problem set is a new condition | 24h |
 | Disputes / frozen (`pilot-disputes-frozen`) | `disputesOpen` > 0 or `frozenSubscriptions` > 0 (a changed count is a new condition) | 24h |
 | Refund spike (`pilot-refund-spike`) | refunds >= 2 and >= 20% of packs sold | 72h |
 | MRR change (`pilot-mrr-change`) | MRR moved >= 10% and >= $20 vs a week ago (up or down are separate) | 72h |

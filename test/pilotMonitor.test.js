@@ -252,3 +252,53 @@ test('config validation accepts a research.pilot block and refuses option-lookin
   assert.match(errors, /research\.pilot\.sshHost/);
   assert.match(errors, /thresholds\.webhookSilenceMinutes/);
 });
+
+// ---- the website chat (health.chat): server or bot down, or a nightly job stale ------------------------------------------------------------
+const chatOk = { serverUp: true, botUp: true, chatVersion: '4.18.0', backupAgeHours: 9.5, purgeAgeHours: 8 };
+
+async function chatScan(chat) {
+  const dataDir = tmp();
+  try {
+    await sampleAt(dataDir, healthy({ funnel: { signups7d: 40 } }), at(24 * 7));
+    await sampleAt(dataDir, healthy({ health: { chat } }), NOW);
+    return scanPilotSignals({ dataDir, instanceConfig: config(), now: NOW });
+  } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
+}
+
+test('chat health: a healthy chat, an absent block (null) and not-yet-reported ages raise nothing', async () => {
+  for (const chat of [chatOk, null, { ...chatOk, backupAgeHours: null, purgeAgeHours: null }, { ...chatOk, backupAgeHours: 35.9 }]) {
+    assert.deepEqual((await chatScan(chat)).created.filter((o) => o.signal.kind === 'chatHealth'), [], JSON.stringify(chat));
+  }
+});
+
+test('chat health: a down server, a down bot, a stale backup or purge each raise one scored opportunity naming the problem', async () => {
+  const cases = [
+    [{ ...chatOk, serverUp: false }, /chat server .* not answering/, 'chat-health:serverDown'],
+    [{ ...chatOk, botUp: false }, /chat bot is not listening/, 'chat-health:botDown'],
+    [{ ...chatOk, backupAgeHours: 40 }, /nightly chat backup last succeeded 40h ago/, 'chat-health:backupStale'],
+    [{ ...chatOk, purgeAgeHours: 60 }, /30-day chat purge last succeeded 60h ago/, 'chat-health:purgeStale'],
+    [{ ...chatOk, serverUp: false, botUp: false, backupAgeHours: 50 }, /server .*bot .*backup/s, 'chat-health:serverDown+botDown+backupStale']
+  ];
+  for (const [chat, text, key] of cases) {
+    const r = await chatScan(chat);
+    const hits = r.created.filter((o) => o.signal.kind === 'chatHealth');
+    assert.equal(hits.length, 1, key);
+    assert.equal(hits[0].type, PILOT_OPPORTUNITY_TYPES.chatHealth);
+    assert.match(hits[0].description, text, key);
+    assert.ok(hits[0].signal.key === key || String(hits[0].signal.id ?? '').startsWith(key) || JSON.stringify(hits[0].signal).includes(key), `signal names ${key}`);
+    assert.equal(typeof hits[0].score?.value, 'number');
+  }
+});
+
+test('chat health: the threshold is configurable and validated like the other thresholds', async () => {
+  const dataDir = tmp();
+  try {
+    await sampleAt(dataDir, healthy({ funnel: { signups7d: 40 } }), at(24 * 7));
+    await sampleAt(dataDir, healthy({ health: { chat: { ...chatOk, backupAgeHours: 10 } } }), NOW);
+    const cfg = config(); cfg.research.pilot.thresholds = { chatJobStaleHours: 8 };
+    assert.equal(scanPilotSignals({ dataDir, instanceConfig: cfg, now: NOW }).created.filter((o) => o.signal.kind === 'chatHealth').length, 1);
+  } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
+  const base = JSON.parse(fs.readFileSync(new URL('../examples/instance.example.json', import.meta.url), 'utf8'));
+  base.research.pilot.thresholds = { chatJobStaleHours: -1 };
+  assert.match(validateInstanceConfig(base).errors.join('\n'), /thresholds\.chatJobStaleHours/);
+});
