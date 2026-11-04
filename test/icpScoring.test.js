@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { scoreIcpFit, MAX_SCORE, TIER_A_MIN, TIER_B_MIN } from '../lib/research/icpScoring.js';
+import { scoreIcpFit, PROVISIONAL_MAX_SCORE, MAX_SCORE, TIER_A_MIN, TIER_B_MIN } from '../lib/research/icpScoring.js';
 
 const IDEAL_SIGNALS = {
   revenueEstimate: 3_000_000,
@@ -79,4 +79,26 @@ test('criteria sum to the documented section maxes: business 40, opportunity 35,
   assert.equal(maxByCategory.businessFit, 40);
   assert.equal(maxByCategory.opportunity, 35);
   assert.equal(maxByCategory.buyerFit, 15);
+});
+
+test('provisional scoring: with job value and lead volume unobserved, score is out of 70 with 56/45 tier cuts', () => {
+  const { avgJobValue, monthlyLeadsEstimate, ...observable } = IDEAL_SIGNALS;
+  const full = scoreIcpFit({ ...observable, avgJobValue: null, monthlyLeadsEstimate: null });
+  assert.equal(full.provisional, true);
+  assert.equal(full.score, 70);
+  assert.equal(full.maxScore, PROVISIONAL_MAX_SCORE);
+  assert.equal(full.tier, 'A');
+  const b = scoreIcpFit({ ...observable, avgJobValue: null, monthlyLeadsEstimate: null, activeAdvertising: false, largeDatabaseLikely: false });
+  assert.equal(b.score, 55);
+  assert.equal(b.tier, 'B');
+  const low = scoreIcpFit({ ...observable, avgJobValue: null, monthlyLeadsEstimate: null, activeAdvertising: false, largeDatabaseLikely: false, weakCrm: false, growthMindsetEvidence: false });
+  assert.equal(low.score, 45);
+  assert.equal(low.tier, 'B');
+  assert.equal(scoreIcpFit({ ...observable, avgJobValue: null, monthlyLeadsEstimate: null, activeAdvertising: false, largeDatabaseLikely: false, weakCrm: false, growthMindsetEvidence: false, ownerAccessible: false }).tier, 'archive');
+});
+
+test('supplying either unobservable signal switches back to standard 90-point scoring', () => {
+  const result = scoreIcpFit({ ...IDEAL_SIGNALS, monthlyLeadsEstimate: null });
+  assert.equal(result.provisional, false);
+  assert.equal(result.maxScore, MAX_SCORE);
 });

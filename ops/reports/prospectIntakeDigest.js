@@ -40,10 +40,10 @@ function draftsByProspectId(drafts) {
 function buildTextBody(scored, draftsById) {
   const lines = [`HVAC prospecting - ${scored.length} prospect(s) scored since last digest`, ''];
   scored.forEach((event, index) => {
-    const { business, leakHypothesis, score, maxScore, tier } = event.payload;
+    const { business, leakHypothesis, score, maxScore, tier, provisional } = event.payload;
     const draft = draftsById.get(event.subject.id);
     lines.push(
-      `${index + 1}. ${business.name} (${business.location ?? 'location unknown'}) - Tier ${tier}, ${score}/${maxScore}`,
+      `${index + 1}. ${business.name} (${business.location ?? 'location unknown'}) - Tier ${tier}, ${score}/${maxScore}${provisional ? ' (provisional)' : ''}`,
       `   Leak hypothesis: ${leakHypothesis}`
     );
     if (draft) {
@@ -59,7 +59,7 @@ function buildTextBody(scored, draftsById) {
 function buildHtmlBody(scored, draftsById) {
   const items = scored
     .map((event) => {
-      const { business, leakHypothesis, score, maxScore, tier } = event.payload;
+      const { business, leakHypothesis, score, maxScore, tier, provisional } = event.payload;
       const draft = draftsById.get(event.subject.id);
       const draftBlock = draft
         ? `<p style="margin:6px 0 0;font-size:13px;">Day-1 ${escapeHtml(draft.payload.channel)} draft &mdash; <strong>${escapeHtml(draft.payload.draftSubject ?? '')}</strong></p>
@@ -70,7 +70,7 @@ function buildHtmlBody(scored, draftsById) {
       return `
     <div style="margin:0 0 22px;padding:14px 16px;border:1px solid #e0e0e4;border-radius:8px;">
       <p style="margin:0 0 6px;font-weight:600;">${escapeHtml(business.name)} <span style="font-weight:400;color:#666;">(${escapeHtml(business.location ?? 'location unknown')})</span></p>
-      <p style="margin:0 0 6px;color:#666;font-size:13px;">Tier ${escapeHtml(tier)} &mdash; ${escapeHtml(score)}/${escapeHtml(maxScore)}</p>
+      <p style="margin:0 0 6px;color:#666;font-size:13px;">Tier ${escapeHtml(tier)} &mdash; ${escapeHtml(score)}/${escapeHtml(maxScore)}${provisional ? ' (provisional scale)' : ''}</p>
       <p style="margin:0;font-size:13px;">${escapeHtml(leakHypothesis)}</p>
       ${draftBlock}
     </div>`;

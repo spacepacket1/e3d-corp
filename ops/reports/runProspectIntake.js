@@ -85,13 +85,14 @@ async function main() {
         sourceNotes: brief.sourceNotes,
         score: scored.score,
         maxScore: scored.maxScore,
+        provisional: scored.provisional,
         tier: scored.tier,
         breakdown: scored.breakdown
       },
       correlationId: crypto.randomUUID()
     });
     scoredCount += 1;
-    process.stdout.write(`${business.name}: scored ${scored.score}/${scored.maxScore}, Tier ${scored.tier}\n`);
+    process.stdout.write(`${business.name}: scored ${scored.score}/${scored.maxScore}${scored.provisional ? ' (provisional)' : ''}, Tier ${scored.tier}\n`);
 
     if (scored.tier === 'archive') {
       process.stdout.write(`${business.name}: Tier archive, no outreach drafted.\n`);
