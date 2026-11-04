@@ -302,3 +302,21 @@ test('chat health: the threshold is configurable and validated like the other th
   base.research.pilot.thresholds = { chatJobStaleHours: -1 };
   assert.match(validateInstanceConfig(base).errors.join('\n'), /thresholds\.chatJobStaleHours/);
 });
+
+test('webhook silence only alarms when Stripe took a payment after the last webhook Pilot received', async () => {
+  const MIN = 60_000;
+  const cases = [
+    ['no live charges at all', null, false],
+    ['latest charge older than the last webhook', NOW.getTime() - 2000 * MIN, false],
+    ['latest charge newer than the last webhook', NOW.getTime() - 100 * MIN, true],
+    ['Stripe unreachable falls back to age alone', undefined, true]
+  ];
+  for (const [label, stripeAt, expected] of cases) {
+    const dataDir = tmp();
+    try {
+      await sampleAt(dataDir, healthy({ health: { lastWebhookAgeMinutes: 1000 }, usage: { debates7d: 5 } }), NOW);
+      const r = scanPilotSignals({ dataDir, instanceConfig: config(), now: NOW, stripeLatestChargeAt: stripeAt });
+      assert.equal(kinds(r).includes('webhookSilence'), expected, label);
+    } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
+  }
+});
