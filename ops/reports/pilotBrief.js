@@ -10,6 +10,7 @@ import { queryEvents } from '../../lib/events/store.js';
 import { listProposals } from '../../lib/proposals/store.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
+import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -45,7 +46,8 @@ export function collectBrief({ dataDir, now = new Date() }) {
   const bookings = queryEvents(dataDir, { type: 'lead.received', since: new Date(now.getTime() - 7 * DAY_MS).toISOString() });
   const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type));
 
-  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts };
+  const listening = recentListening(dataDir, { now });
+  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening };
 }
 
 // ---------- rendering ----------
@@ -54,6 +56,8 @@ function headline(c) {
   const bits = [];
   if (c.leadTotal) bits.push(`${c.leadTotal} post${c.leadTotal === 1 ? '' : 's'} to reply to`);
   if (c.brief) bits.push('market news');
+  const chatter = Object.values(c.listening ?? {}).reduce((a, l) => a + l.length, 0);
+  if (chatter) bits.push(`${chatter} new mention${chatter === 1 ? '' : 's'} elsewhere`);
   if (c.bookings.length) bits.push(`${c.bookings.length} booking${c.bookings.length === 1 ? '' : 's'}`);
   if (c.drafts.length) bits.push(`${c.drafts.length} draft${c.drafts.length === 1 ? '' : 's'} to approve`);
   return bits.length ? bits.join(', ') : 'quiet day';
@@ -94,6 +98,14 @@ export function renderText(c, dateLabel) {
     if ((c.brief.implications ?? []).length) { out.push('What it means for Pilot:'); for (const i of [].concat(c.brief.implications).slice(0, 3)) out.push(`- ${clip(typeof i === 'string' ? i : JSON.stringify(i), 260)}`); }
     out.push('');
   }
+  const L = c.listening ?? {};
+  if (Object.keys(L).length) {
+    out.push('WHO ELSE IS BUILDING THIS, AND WHAT PEOPLE ARE SAYING');
+    for (const it of L.hackernews ?? []) out.push(`- Hacker News: ${it.title} (${it.score} pts, ${it.comments} comments) ${it.url}`);
+    for (const it of L.github ?? []) out.push(`- GitHub: ${it.title}, ${it.score} stars${it.description ? ` - ${it.description}` : ''} ${it.url}`);
+    for (const it of L.youtube ?? []) out.push(`- YouTube: ${it.title} (${it.channel}) ${it.url}`);
+    out.push('');
+  }
   if (c.leadTotal) {
     out.push(`POSTS WORTH A REPLY (${Math.min(c.leadTotal, MAX_LEADS)} of ${c.leadTotal})`);
     c.leads.slice(0, MAX_LEADS).forEach((l, i) => out.push(`${i + 1}. ${l.url}`, `   Post: ${clip(l.post, 240)}`, `   Why it fits: ${clip(l.topic, 120)}`, `   Draft reply: ${clip(l.reply, 400)}`, ''));
@@ -120,6 +132,13 @@ export function renderHtml(c, dateLabel) {
     const imps = [].concat(c.brief.implications ?? []).slice(0, 3).map((i) => esc(clip(typeof i === 'string' ? i : JSON.stringify(i), 260)));
     if (imps.length) parts.push(`<p style="${P}"><b>What it means for Pilot</b></p>`, ul(imps));
   }
+  const L = c.listening ?? {};
+  const rows = [
+    ...(L.hackernews ?? []).map((it) => `<b>Hacker News</b> &middot; <a href="${esc(it.url)}" style="color:#2952cc;">${esc(it.title)}</a> (${it.score} pts, ${it.comments} comments)`),
+    ...(L.github ?? []).map((it) => `<b>GitHub</b> &middot; <a href="${esc(it.url)}" style="color:#2952cc;">${esc(it.title)}</a>, ${it.score} stars${it.description ? ` &mdash; ${esc(it.description)}` : ''}`),
+    ...(L.youtube ?? []).map((it) => `<b>YouTube</b> &middot; <a href="${esc(it.url)}" style="color:#2952cc;">${esc(it.title)}</a> (${esc(it.channel)})`)
+  ];
+  if (rows.length) parts.push(`<h2 style="${H2}">Who else is building this, and what people are saying</h2>`, ul(rows));
   if (c.leadTotal) {
     parts.push(`<h2 style="${H2}">Posts worth a reply (${Math.min(c.leadTotal, MAX_LEADS)} of ${c.leadTotal})</h2>`);
     for (const l of c.leads.slice(0, MAX_LEADS)) {
@@ -144,6 +163,8 @@ async function main() {
   const { config, dataDir } = loadInstance(instanceName);
   const now = new Date();
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const listened = await collectListening({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'listening', message: e.message }] }));
+  for (const err of listened.errors) process.stderr.write(`Listening source ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now });
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
