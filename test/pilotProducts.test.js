@@ -50,3 +50,8 @@ test('one ambiguous word is not enough to leave Pilot ("Obsidian Labs", a game s
   assert.equal(suggestProduct(who('Director at Obsidian Entertainment')).id, 'e3d-pilot');
   assert.equal(suggestProduct(who('Obsidian vault and a second brain for my notes')).id, 'e3d-brain');
 });
+
+test('a post about turning reading into an LLM wiki goes to e3d-brain, not Pilot', () => {
+  const g = suggestProduct({ bio: 'I share Claude and LLM prompts', evidence: { title: 'Andrej Karpathy shared how he gets AI to turn what he reads into a wiki. Build yours tonight' } });
+  assert.equal(g.id, 'e3d-brain');
+});

@@ -43,7 +43,7 @@ test('guestKind honours configured domains and exact team emails', () => {
 test('the brief lists meetings with who and when, and the headline counts only people outside the team', () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bk-'));
   try {
-    const rec = (s) => appendEvent(dataDir, { type: 'lead.received', source: 'google-calendar.appointment-booking', subject: { type: 'lead', id: s.email }, payload: { source: 'google-calendar', submission: s }, correlationId: 'c-' + s.email, occurredAt: '2026-11-06T05:15:00Z' });
+    const rec = (s) => appendEvent(dataDir, { type: 'lead.received', source: 'google-calendar.appointment-booking', subject: { type: 'lead', id: s.email }, payload: { source: 'google-calendar', submission: s }, correlationId: 'c-' + s.email, occurredAt: '2026-11-08T05:15:00Z' });
     rec({ email: 'owner@futco.ai', meetingTitle: 'Webinar', meetingStart: '2026-11-23T10:00:00-08:00', name: '' });
     rec({ email: 'chris@chappleshouse.com', meetingTitle: 'E3D Pilot Meeting', meetingStart: '2026-11-10T09:00:00-08:00', name: 'Chris Chapple' });
     const c = collectBrief({ dataDir, now: NOW, config: { calendar: { organizerEmail: 'spacepacket@gmail.com' } } });
@@ -53,5 +53,16 @@ test('the brief lists meetings with who and when, and the headline counts only p
     assert.match(text, /Webinar .*\[team\]/);
     assert.match(text, /Today: 1 meeting or inquiry from outside the team/);
     assert.match(html, /Meetings and inquiries/);
+  } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
+});
+
+test('a booking is shown once: not again the next day, except a reminder the day the meeting happens', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bk2-'));
+  try {
+    appendEvent(dataDir, { type: 'lead.received', source: 'google-calendar.appointment-booking', subject: { type: 'lead', id: 'x@acme.com' }, payload: { source: 'google-calendar', submission: { email: 'x@acme.com', meetingTitle: 'Intro call', meetingStart: '2026-11-12T09:00:00-08:00', name: 'X' } }, correlationId: 'c1', occurredAt: '2026-11-08T05:00:00Z' });
+    const at = (iso) => renderText(collectBrief({ dataDir, now: new Date(iso), config: {} }), 'x');
+    assert.match(at('2026-11-08T15:00:00Z'), /Intro call/, 'new: shown');
+    assert.doesNotMatch(at('2026-11-09T15:00:00Z'), /Intro call/, 'next day: not repeated');
+    assert.match(at('2026-11-11T20:00:00Z'), /Intro call/, 'the day before: reminder');
   } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
 });

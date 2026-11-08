@@ -48,9 +48,12 @@ export function collectBrief({ dataDir, now = new Date(), config = null }) {
   }
 
   const pb = config?.pilotBrief ?? {};
+  // Nothing repeats day to day: a booking shows once (the day it is recorded), plus a reminder the day a meeting is
+  // about to happen; a draft shows once (the day it is queued).
   const bookings = summarizeBookings(queryEvents(dataDir, { type: 'lead.received', since: new Date(now.getTime() - 7 * DAY_MS).toISOString() }),
-    { now, teamDomains: pb.teamDomains, teamEmails: [config?.calendar?.organizerEmail, ...(pb.teamEmails ?? [])].filter(Boolean) });
-  const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type));
+    { now, teamDomains: pb.teamDomains, teamEmails: [config?.calendar?.organizerEmail, ...(pb.teamEmails ?? [])].filter(Boolean) })
+    .filter((b) => (b.recordedAt && b.recordedAt >= since) || (b.upcoming && b.start && Date.parse(b.start) - now.getTime() <= DAY_MS));
+  const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type) && p.createdAt && p.createdAt >= since);
 
   const listening = recentListening(dataDir, { now });
   const products = config?.research?.pilotCandidates?.products ?? DEFAULT_PRODUCTS;
@@ -127,7 +130,7 @@ export function renderText(c, dateLabel) {
   }
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
-  if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (last 7 days)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
+  if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (new, or happening within 24 hours)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
   if (c.drafts.length) out.push('DRAFT POSTS READY', `- ${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.`, '');
   out.push('Want something added or changed? Just reply to this email.');
   return out.join('\n');
@@ -169,7 +172,7 @@ export function renderHtml(c, dateLabel) {
   }
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
-  if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (last 7 days)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
+  if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (new, or happening within 24 hours)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
   if (c.drafts.length) parts.push(`<h2 style="${H2}">Draft posts ready</h2>`, `<p style="${P}">${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.</p>`);
   parts.push(`<p style="${P}color:#666;font-size:13px;border-top:1px solid #e0e0e4;padding-top:12px;margin-top:18px;">Want something added or changed? Just reply to this email.</p>`);
   return `<div style="max-width:680px;margin:0 auto;color:#1a1a1a;">${parts.join('\n')}</div>`;
