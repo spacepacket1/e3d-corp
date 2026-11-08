@@ -60,3 +60,14 @@ Either way the result is only an `x.draftQueued` event (payload now includes `gr
 # weekly Pilot content drafts, Mondays 08:00 (append --with-ads to also queue an ad proposal)
 0 8 * * 1 /Users/mini/e3d-corp/ops/run/run-pilot-content.sh >> /Users/mini/e3d-corp/.e3d-corp/instance/futco/pilot-content.log 2>&1
 ```
+
+## People to invite (Pilot brief section)
+
+`lib/research/pilotCandidates.js` adds a "People to invite to try Pilot" section to the daily Pilot brief. These are **not sales leads**: the ask is "try Pilot, and if you like it, post about it". Nothing is sent to anyone; the brief only lists who they are, their public audience size, and a recent public post or video showing they talk about this topic.
+
+- Sources (read-only, public data, each isolated so one failing never hides the others): X (recent search with author profile), YouTube (channels behind recent popular videos), Bluesky (public profile search), GitHub (owners of recently active MCP and agent repos), Hacker News (authors of recent Show HN posts, by karma). LinkedIn, TikTok and Instagram have no usable public search API and Reddit blocks automated reads, so they are not scraped.
+- Ranking: audience on a log scale plus how well the evidence post did. Nothing demographic is read, inferred or stored (no age, gender or location); a test pins that.
+- Filters: an audience band per source (default minimum 5,000 on X/YouTube, 1,000 on Bluesky/HN, 500 on GitHub; maximum 500k X, 1M YouTube, 100k Bluesky/HN, 50k GitHub, because a mega-account will not answer a cold note), a topic check on bio or the surfacing post, and a spam-bio filter.
+- Each person is surfaced once (`pilot.candidate.found` events); the brief shows at most 8 per day and 3 per platform.
+- Config, all optional, under `research.pilotCandidates`: `queries` (per source), `minReach`, `maxReach`, `lookbackDays` (14), `perSourceCap` (25), `disabledSources`, `excludeHandles` (for example `"x:@e3d_ai"`, `"github:spacepacket1"`, so we never list ourselves). Uses `X_SEARCH_BEARER_TOKEN` (or the OAuth1 consumer pair), the YouTube API key already configured for the monitor, and `GITHUB_TOKEN` to raise GitHub's rate limit.
+- X search calls are read requests against the X API; at most two queries of 50 posts per day.

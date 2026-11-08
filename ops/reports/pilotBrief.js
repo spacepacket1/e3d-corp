@@ -11,6 +11,7 @@ import { listProposals } from '../../lib/proposals/store.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
 import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
+import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -47,7 +48,8 @@ export function collectBrief({ dataDir, now = new Date() }) {
   const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type));
 
   const listening = recentListening(dataDir, { now });
-  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening };
+  const candidates = recentCandidates(dataDir, { now });
+  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates };
 }
 
 // ---------- rendering ----------
@@ -58,6 +60,7 @@ function headline(c) {
   if (c.brief) bits.push('market news');
   const chatter = Object.values(c.listening ?? {}).reduce((a, l) => a + l.length, 0);
   if (chatter) bits.push(`${chatter} new mention${chatter === 1 ? '' : 's'} elsewhere`);
+  if (c.candidates?.length) bits.push(`${c.candidates.length} ${c.candidates.length === 1 ? 'person' : 'people'} to invite`);
   if (c.bookings.length) bits.push(`${c.bookings.length} booking${c.bookings.length === 1 ? '' : 's'}`);
   if (c.drafts.length) bits.push(`${c.drafts.length} draft${c.drafts.length === 1 ? '' : 's'} to approve`);
   return bits.length ? bits.join(', ') : 'quiet day';
@@ -110,6 +113,11 @@ export function renderText(c, dateLabel) {
     out.push(`POSTS WORTH A REPLY (${Math.min(c.leadTotal, MAX_LEADS)} of ${c.leadTotal})`);
     c.leads.slice(0, MAX_LEADS).forEach((l, i) => out.push(`${i + 1}. ${l.url}`, `   Post: ${clip(l.post, 240)}`, `   Why it fits: ${clip(l.topic, 120)}`, `   Draft reply: ${clip(l.reply, 400)}`, ''));
   }
+  if (c.candidates?.length) {
+    out.push('PEOPLE TO INVITE TO TRY PILOT (not sales leads: ask them to try it and, if they like it, post about it)');
+    for (const p of c.candidates) out.push(`- ${p.name} ${p.handle} on ${p.source}, ${p.reach.toLocaleString('en-US')} ${REACH_LABEL[p.source]} ${p.url}`, `  Recent: ${clip(p.evidence?.title, 140)}${p.evidence?.url ? ` ${p.evidence.url}` : ''}`);
+    out.push('');
+  }
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
   if (c.bookings.length) out.push(`NEW BOOKINGS (last 7 days): ${c.bookings.length}`, '');
@@ -148,6 +156,10 @@ export function renderHtml(c, dateLabel) {
         `<p style="${P}background:#f4f4f6;padding:8px;border-radius:4px;"><b>Draft reply:</b> ${esc(clip(l.reply, 400))}</p></div>`);
     }
   }
+  if (c.candidates?.length) {
+    parts.push(`<h2 style="${H2}">People to invite to try Pilot</h2>`, `<p style="${P}color:#666;font-size:13px;">Not sales leads: the ask is to try it and, if they like it, post about it. Ranked by audience size and how recently they posted on the topic.</p>`);
+    parts.push(ul(c.candidates.map((p) => `<a href="${esc(p.url)}" style="color:#2952cc;"><b>${esc(p.name)}</b> ${esc(p.handle)}</a> &middot; ${esc(p.source)} &middot; ${p.reach.toLocaleString('en-US')} ${esc(REACH_LABEL[p.source])}<br><span style="color:#666;font-size:13px;">Recent: ${p.evidence?.url ? `<a href="${esc(p.evidence.url)}" style="color:#666;">${esc(clip(p.evidence?.title, 140))}</a>` : esc(clip(p.evidence?.title, 140))}</span>`)));
+  }
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
   if (c.bookings.length) parts.push(`<h2 style="${H2}">New bookings</h2>`, `<p style="${P}">${c.bookings.length} in the last 7 days.</p>`);
@@ -165,6 +177,8 @@ async function main() {
   const dateLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
   const listened = await collectListening({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'listening', message: e.message }] }));
   for (const err of listened.errors) process.stderr.write(`Listening source ${err.source} failed: ${err.message}\n`);
+  const found = await collectCandidates({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'candidates', message: e.message }] }));
+  for (const err of found.errors) process.stderr.write(`Candidate source ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now });
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
