@@ -11,6 +11,7 @@ import { listProposals } from '../../lib/proposals/store.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
 import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
+import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
@@ -27,7 +28,7 @@ const usd = (v) => (typeof v === 'number' ? `$${v.toFixed(v % 1 ? 2 : 0)}` : 'n/
 
 // ---------- data ----------
 
-export function collectBrief({ dataDir, now = new Date() }) {
+export function collectBrief({ dataDir, now = new Date(), config = null }) {
   const since = new Date(now.getTime() - DAY_MS).toISOString();
   const pilot = buildPilotSummary(dataDir, { now });
 
@@ -44,7 +45,9 @@ export function collectBrief({ dataDir, now = new Date() }) {
     leads.push({ url: p.tweetUrl, post: p.postText, topic: p.matchedTopic, why: p.finding?.text, reply: p.draftReply });
   }
 
-  const bookings = queryEvents(dataDir, { type: 'lead.received', since: new Date(now.getTime() - 7 * DAY_MS).toISOString() });
+  const pb = config?.pilotBrief ?? {};
+  const bookings = summarizeBookings(queryEvents(dataDir, { type: 'lead.received', since: new Date(now.getTime() - 7 * DAY_MS).toISOString() }),
+    { now, teamDomains: pb.teamDomains, teamEmails: [config?.calendar?.organizerEmail, ...(pb.teamEmails ?? [])].filter(Boolean) });
   const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type));
 
   const listening = recentListening(dataDir, { now });
@@ -61,7 +64,8 @@ function headline(c) {
   const chatter = Object.values(c.listening ?? {}).reduce((a, l) => a + l.length, 0);
   if (chatter) bits.push(`${chatter} new mention${chatter === 1 ? '' : 's'} elsewhere`);
   if (c.candidates?.length) bits.push(`${c.candidates.length} ${c.candidates.length === 1 ? 'person' : 'people'} to invite`);
-  if (c.bookings.length) bits.push(`${c.bookings.length} booking${c.bookings.length === 1 ? '' : 's'}`);
+  const ext = externalCount(c.bookings);
+  if (ext) bits.push(`${ext} meeting${ext === 1 ? '' : 's'} or inquir${ext === 1 ? 'y' : 'ies'} from outside the team`);
   if (c.drafts.length) bits.push(`${c.drafts.length} draft${c.drafts.length === 1 ? '' : 's'} to approve`);
   return bits.length ? bits.join(', ') : 'quiet day';
 }
@@ -120,7 +124,7 @@ export function renderText(c, dateLabel) {
   }
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
-  if (c.bookings.length) out.push(`NEW BOOKINGS (last 7 days): ${c.bookings.length}`, '');
+  if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (last 7 days)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
   if (c.drafts.length) out.push('WAITING ON APPROVAL', `- ${c.drafts.length} draft post(s) are queued. Ask Chris to approve, or reply with edits.`, '');
   out.push('Want something added or changed? Just reply to this email.');
   return out.join('\n');
@@ -162,7 +166,7 @@ export function renderHtml(c, dateLabel) {
   }
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
-  if (c.bookings.length) parts.push(`<h2 style="${H2}">New bookings</h2>`, `<p style="${P}">${c.bookings.length} in the last 7 days.</p>`);
+  if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (last 7 days)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
   if (c.drafts.length) parts.push(`<h2 style="${H2}">Waiting on approval</h2>`, `<p style="${P}">${c.drafts.length} draft post(s) are queued. Ask Chris to approve, or reply with edits.</p>`);
   parts.push(`<p style="${P}color:#666;font-size:13px;border-top:1px solid #e0e0e4;padding-top:12px;margin-top:18px;">Want something added or changed? Just reply to this email.</p>`);
   return `<div style="max-width:680px;margin:0 auto;color:#1a1a1a;">${parts.join('\n')}</div>`;
@@ -179,7 +183,7 @@ async function main() {
   for (const err of listened.errors) process.stderr.write(`Listening source ${err.source} failed: ${err.message}\n`);
   const found = await collectCandidates({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'candidates', message: e.message }] }));
   for (const err of found.errors) process.stderr.write(`Candidate source ${err.source} failed: ${err.message}\n`);
-  const c = collectBrief({ dataDir, now });
+  const c = collectBrief({ dataDir, now, config });
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
 
