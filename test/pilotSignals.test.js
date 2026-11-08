@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { collectSignals, recentSignals, parseRss, amountOf, ANGLES } from '../lib/research/pilotSignals.js';
-import { collectFootprint, footprintChanges } from '../lib/research/pilotFootprint.js';
 
 const rss = (items) => `<rss><channel>${items.map(([t, u, src]) => `<item><title><![CDATA[${t} - ${src}]]></title><link>${u}</link><source url="x">${src}</source><pubDate>Sat, 07 Nov 2026 10:00:00 GMT</pubDate></item>`).join('')}</channel></rss>`;
 const NEWS = [
@@ -73,25 +72,5 @@ test('signals: one failing source does not hide the others', async () => {
     const { errors } = await collectSignals({ instanceConfig: {}, dataDir, now: NOW, env: {}, fetchImpl: flaky });
     assert.deepEqual(errors.map((e) => e.source).sort(), ['funded', 'triggers']);
     assert.equal(recentSignals(dataDir, { now: NOW }).hiring.length, 1);
-  } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
-});
-
-test('footprint: reports the first reading, then only changes', async () => {
-  const dataDir = tmp();
-  try {
-    let stars = 4, prState = 'open';
-    const gh = async (url) => String(url).includes('/pulls/')
-      ? res({ state: prState, merged: false, html_url: 'https://github.com/o/r/pull/1', comments: 2 })
-      : res({ stargazers_count: stars, forks_count: 0 });
-    const cfg = { research: { pilotFootprint: { repos: ['o/r'], pullRequests: [{ repo: 'o/r', number: 1, label: 'listing' }] } } };
-    await collectFootprint({ instanceConfig: cfg, dataDir, now: NOW, env: {}, fetchImpl: gh });
-    assert.equal(footprintChanges(dataDir).length, 2, 'first reading');
-    await collectFootprint({ instanceConfig: cfg, dataDir, now: new Date(NOW.getTime() + 86_400_000), env: {}, fetchImpl: gh });
-    assert.deepEqual(footprintChanges(dataDir), [], 'nothing changed, nothing shown');
-    stars = 6; prState = 'merged';
-    await collectFootprint({ instanceConfig: cfg, dataDir, now: new Date(NOW.getTime() + 2 * 86_400_000), env: {}, fetchImpl: gh });
-    const lines = footprintChanges(dataDir).join('\n');
-    assert.match(lines, /6 stars \(\+2\)/);
-    assert.match(lines, /listing: merged \(was open\)/);
   } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
 });

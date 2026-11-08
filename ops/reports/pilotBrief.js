@@ -12,7 +12,6 @@ import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
 import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
 import { recentSignals, collectSignals } from '../../lib/research/pilotSignals.js';
-import { collectFootprint, footprintChanges } from '../../lib/research/pilotFootprint.js';
 import { suggestProduct, DEFAULT_PRODUCTS } from '../../lib/pilot/products.js';
 import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
@@ -65,8 +64,7 @@ export function collectBrief({ dataDir, now = new Date(), config = null }) {
   const products = config?.research?.pilotCandidates?.products ?? DEFAULT_PRODUCTS;
   const candidates = recentCandidates(dataDir, { now, hours: FRESH_HOURS }).map((p) => ({ ...p, suggest: suggestProduct(p, products) }));
   const signals = recentSignals(dataDir, { now, hours: FRESH_HOURS });
-  const footprint = footprintChanges(dataDir);
-  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates, signals, footprint };
+  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates, signals };
 }
 
 // ---------- rendering ----------
@@ -155,7 +153,6 @@ export function renderText(c, dateLabel) {
     for (const it of sg.trigger) out.push(`- ${it.category}: ${clip(it.title, 150)} (${it.note}) ${it.url}`, `  Angle: ${it.angle}`);
     out.push('');
   }
-  if (c.footprint?.length) out.push('PILOT FOOTPRINT (what changed on GitHub)', ...c.footprint.map((l) => `- ${l}`), '');
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
   if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (new, or happening within 24 hours)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
@@ -208,7 +205,6 @@ export function renderHtml(c, dateLabel) {
     parts.push(`<h2 style="${H2}">Reasons to reach out today</h2>`, `<p style="${P}color:#666;font-size:13px;">News, and what Pilot can honestly say about it.</p>`);
     parts.push(ul(sg.trigger.map((it) => `<b>${esc(it.category)}</b>: <a href="${esc(it.url)}" style="color:#2952cc;">${esc(clip(it.title, 150))}</a> <span style="color:#666;">(${esc(it.note)})</span><br><span style="background:#f4f4f6;display:inline-block;padding:4px 6px;border-radius:4px;margin-top:3px;"><b>Angle:</b> ${esc(it.angle)}</span>`)));
   }
-  if (c.footprint?.length) parts.push(`<h2 style="${H2}">Pilot footprint (what changed on GitHub)</h2>`, ul(c.footprint.map(esc)));
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
   if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (new, or happening within 24 hours)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
@@ -230,8 +226,6 @@ async function main() {
   for (const err of found.errors) process.stderr.write(`Candidate source ${err.source} failed: ${err.message}\n`);
   const sigs = await collectSignals({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'signals', message: e.message }] }));
   for (const err of sigs.errors) process.stderr.write(`Signal source ${err.source} failed: ${err.message}\n`);
-  const foot = await collectFootprint({ instanceConfig: config, dataDir, now }).catch((e) => ({ errors: [{ source: 'footprint', message: e.message }] }));
-  for (const err of foot.errors) process.stderr.write(`Footprint ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now, config });
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
