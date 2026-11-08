@@ -15,16 +15,16 @@ const fakeFetch = (log = []) => async (url) => {
     { id: 't2', author_id: 'u2', text: 'tiny account post', public_metrics: {} },
     { id: 't3', author_id: 'u3', text: 'free airdrop agent', public_metrics: {} }],
     includes: { users: [
-      { id: 'u1', username: 'builder', name: 'Builder', description: 'shipping agents', public_metrics: { followers_count: 42000 } },
+      { id: 'u1', username: 'builder', name: 'Builder', description: 'shipping AI agents', public_metrics: { followers_count: 42000 } },
       { id: 'u2', username: 'tiny', name: 'Tiny', description: '', public_metrics: { followers_count: 80 } },
       { id: 'u3', username: 'spam', name: 'Spam', description: 'AIRDROP signals DM me', public_metrics: { followers_count: 90000 } }] } });
   if (u.includes('googleapis.com/youtube/v3/search')) return ok({ items: [{ id: { videoId: 'v1' }, snippet: { channelId: 'c1', title: 'Claude Code &amp; MCP don&#39;t panic' } }] });
-  if (u.includes('googleapis.com/youtube/v3/channels')) return ok({ items: [{ id: 'c1', snippet: { title: 'Dev Channel', customUrl: '@devchan', description: 'ai dev' }, statistics: { subscriberCount: '120000' } }] });
+  if (u.includes('googleapis.com/youtube/v3/channels')) return ok({ items: [{ id: 'c1', snippet: { title: 'Dev Channel', customUrl: '@devchan', description: 'ai developer' }, statistics: { subscriberCount: '120000' } }] });
   if (u.includes('searchActors')) return ok({ actors: [{ did: 'did:1' }] });
-  if (u.includes('getProfiles')) return ok({ profiles: [{ did: 'did:1', handle: 'a.bsky.social', displayName: 'A', followersCount: 3000, description: 'agents' }] });
+  if (u.includes('getProfiles')) return ok({ profiles: [{ did: 'did:1', handle: 'a.bsky.social', displayName: 'A', followersCount: 3000, description: 'building AI agents' }] });
   if (u.includes('api.github.com/search')) return ok({ items: [{ full_name: 'dev/mcp-thing', description: 'an mcp server', html_url: 'https://github.com/dev/mcp-thing', stargazers_count: 300, owner: { login: 'dev', type: 'User' } }, { full_name: 'org/x', owner: { login: 'org', type: 'Organization' } }] });
-  if (u.includes('api.github.com/users/dev')) return ok({ login: 'dev', name: 'Dev', html_url: 'https://github.com/dev', followers: 1500, bio: 'builds agents' });
-  if (u.includes('hn.algolia')) return ok({ hits: [{ author: 'hnuser', title: 'Show HN: agent thing', objectID: '9', points: 40 }] });
+  if (u.includes('api.github.com/users/dev')) return ok({ login: 'dev', name: 'Dev', html_url: 'https://github.com/dev', followers: 1500, bio: 'builds AI agents' });
+  if (u.includes('hn.algolia')) return ok({ hits: [{ author: 'hnuser', title: 'Show HN: AI agent thing', objectID: '9', points: 40 }] });
   if (u.includes('firebaseio')) return ok({ karma: 5000, about: 'hi <b>there</b>' });
   throw new Error('unexpected ' + u);
 };
@@ -69,6 +69,12 @@ test('ranking uses audience and engagement only; no demographic field is read or
   assert.equal(eligible({ ...person, reach: 20_000_000 }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'a mega-account is outside the reachable band');
   assert.equal(eligible({ ...person, bio: 'cooking and travel', evidence: { title: 'my pasta recipe', engagement: 1 } }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'must visibly talk about AI building');
   assert.equal(eligible({ ...person, bio: 'political podcast host', evidence: { title: 'my guest on the show', engagement: 1 } }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'a podcaster with no AI angle is not a candidate');
+  const e = { minReach: DEFAULT_MIN_REACH, exclude: new Set() };
+  assert.equal(eligible({ ...person, bio: 'Agent Joe Veltre. Novelist, author of Annihilation', evidence: { title: 'new book', engagement: 1 } }, e), false, 'a bare "agent" is not AI');
+  assert.equal(eligible({ ...person, bio: 'BBC Verify journalist covering AI disinformation', evidence: { title: 'AI fakes', engagement: 1 } }, e), false, 'journalists are not builders');
+  assert.equal(eligible({ ...person, bio: 'I write about AI', evidence: { title: 'thoughts', engagement: 1 } }, e), false, 'mentioning AI without building anything is not enough');
+  assert.equal(eligible({ ...person, source: 'youtube', bio: 'AI tutorials', evidence: { title: 'The Dark TRUTH Behind ChatGPT #shorts', engagement: 0 } }, e), false, 'clickbait shorts are skipped');
+  assert.equal(eligible({ ...person, bio: 'AI बिल्डर, building agents', evidence: { title: 'मैं एजेंट बना रहा हूं और यह बहुत अच्छा है आज', engagement: 1 } }, e), false, 'mostly non-English posts are skipped: the team cannot act on them');
   assert.equal(dedupe([person, { ...person, evidence: { engagement: 50 } }]).length, 1);
   const src = fs.readFileSync(new URL('../lib/research/pilotCandidates.js', import.meta.url), 'utf8');
   assert.ok(!/\b(age|birth|gender|genz|gen z)\b\s*[:=(]/i.test(src.replace(/\/\/.*$/gm, '')), 'no age or demographic inference in code');
