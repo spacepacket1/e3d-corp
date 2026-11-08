@@ -15,6 +15,7 @@ import { recentSignals, collectSignals } from '../../lib/research/pilotSignals.j
 import { suggestProduct, DEFAULT_PRODUCTS } from '../../lib/pilot/products.js';
 import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
+import { buildWildcardEvidence, runWildcardSection } from '../../lib/pilot/wildcard.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -157,6 +158,17 @@ export function renderText(c, dateLabel) {
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
   if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (new, or happening within 24 hours)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
   if (c.drafts.length) out.push('DRAFT POSTS READY', `- ${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.`, '');
+  const w = c.wildcard;
+  if (w?.practical?.length) {
+    out.push('IDEAS WORTH TRYING (practical, each with a no-spend first test)');
+    for (const i of w.practical) out.push(`- ${i.title} [${i.lens} lens]`, `  ${i.idea}`, `  Why now: ${i.whyNow}`, `  Based on: ${i.basedOn.map((t) => clip(t, 120)).join(' | ')}`, `  Risk: ${i.risk}`, `  Smallest test: ${i.firstTest}`);
+    out.push('');
+  }
+  if (w?.moonshot) {
+    const m = w.moonshot;
+    out.push('MOONSHOT', `${m.title} [${m.lens} lens]`, m.idea, `Why now: ${m.whyNow}`, `Based on: ${m.basedOn.map((t) => clip(t, 140)).join(' | ')}`, `Worst case: ${m.risk}`, `Rough cost: ${m.costNote}`, `Cheapest rehearsal: ${m.firstTest}`);
+  }
+  if (w) out.push('Speculative ideas, not checked product claims. Nothing here has been done, sent or spent.', '');
   out.push('Want something added or changed? Just reply to this email.');
   return out.join('\n');
 }
@@ -209,6 +221,23 @@ export function renderHtml(c, dateLabel) {
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
   if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (new, or happening within 24 hours)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
   if (c.drafts.length) parts.push(`<h2 style="${H2}">Draft posts ready</h2>`, `<p style="${P}">${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.</p>`);
+  if (c.wildcard) {
+    const w = c.wildcard;
+    const card = (i, border, rows) => `<div style="border:1px ${border};border-radius:6px;padding:10px 12px;margin:0 0 10px;">` +
+      `<p style="${P}"><b>${esc(i.title)}</b> <span style="color:#666;font-size:13px;">&middot; ${esc(i.lens)} lens</span></p>` +
+      `<p style="${P}">${esc(i.idea)}</p><p style="${P}"><b>Why now:</b> ${esc(i.whyNow)}</p>` +
+      `<p style="${P}color:#666;font-size:13px;"><b>Based on:</b> ${i.basedOn.map((t) => esc(clip(t, 140))).join(' &middot; ')}</p>${rows}</div>`;
+    if (w.practical?.length) {
+      parts.push(`<h2 style="${H2}">Ideas worth trying</h2>`);
+      for (const i of w.practical) parts.push(card(i, 'solid #e0e0e4', `<p style="${P}"><b>Risk:</b> ${esc(i.risk)}</p><p style="${P}background:#f4f4f6;padding:8px;border-radius:4px;"><b>Smallest test:</b> ${esc(i.firstTest)}</p>`));
+    }
+    if (w.moonshot) {
+      const m = w.moonshot;
+      parts.push(`<h2 style="${H2}">Moonshot</h2>`,
+        card(m, 'dashed #b8a4e0', `<p style="${P}"><b>Worst case:</b> ${esc(m.risk)}</p><p style="${P}"><b>Rough cost:</b> ${esc(m.costNote)}</p><p style="${P}background:#f4f4f6;padding:8px;border-radius:4px;"><b>Cheapest rehearsal:</b> ${esc(m.firstTest)}</p>`));
+    }
+    parts.push(`<p style="${P}color:#666;font-size:13px;">Speculative ideas, not checked product claims. Nothing here has been done, sent or spent.</p>`);
+  }
   parts.push(`<p style="${P}color:#666;font-size:13px;border-top:1px solid #e0e0e4;padding-top:12px;margin-top:18px;">Want something added or changed? Just reply to this email.</p>`);
   return `<div style="max-width:680px;margin:0 auto;color:#1a1a1a;">${parts.join('\n')}</div>`;
 }
@@ -227,6 +256,17 @@ async function main() {
   const sigs = await collectSignals({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'signals', message: e.message }] }));
   for (const err of sigs.errors) process.stderr.write(`Signal source ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now, config });
+  // Off unless asked for. When on, any failure or "no idea today" simply leaves the section out.
+  if (process.argv.includes('--wildcard')) {
+    const wc = config?.pilotBrief?.wildcard ?? {};
+    c.wildcard = await runWildcardSection({
+      evidence: buildWildcardEvidence(c, { numbers: numbersLines(c), headline: headline(c) }),
+      instanceConfig: config,
+      brainConfig: arg('--brain-config') ?? wc.brainConfig ?? null,
+      brainMain: arg('--brain-main') ?? wc.brainMain ?? null,
+      warn: (m) => process.stderr.write(`${m}\n`)
+    });
+  }
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
 
