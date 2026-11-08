@@ -11,12 +11,18 @@ import { listProposals } from '../../lib/proposals/store.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
 import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
+import { recentSignals, collectSignals } from '../../lib/research/pilotSignals.js';
+import { collectFootprint, footprintChanges } from '../../lib/research/pilotFootprint.js';
 import { suggestProduct, DEFAULT_PRODUCTS } from '../../lib/pilot/products.js';
 import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
 const DAY_MS = 24 * 60 * 60 * 1000;
+// "New today" means the last 20 hours, not 24: the cron fires about 24h apart (give or take seconds), and a full 24h window would
+// sometimes include the previous run's items again.
+const FRESH_HOURS = 20;
+const FRESH_MS = FRESH_HOURS * 60 * 60 * 1000;
 const MAX_LEADS = 5;
 
 const arg = (name) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : null);
@@ -31,7 +37,7 @@ const usd = (v) => (typeof v === 'number' ? `$${v.toFixed(v % 1 ? 2 : 0)}` : 'n/
 // ---------- data ----------
 
 export function collectBrief({ dataDir, now = new Date(), config = null }) {
-  const since = new Date(now.getTime() - DAY_MS).toISOString();
+  const since = new Date(now.getTime() - FRESH_MS).toISOString();
   const pilot = buildPilotSummary(dataDir, { now });
 
   const briefEvents = queryEvents(dataDir, { type: 'pilot.competitorBrief.created' }).filter((e) => e.payload?.status === 'ok' && e.payload?.brief);
@@ -55,10 +61,12 @@ export function collectBrief({ dataDir, now = new Date(), config = null }) {
     .filter((b) => (b.recordedAt && b.recordedAt >= since) || (b.upcoming && b.start && Date.parse(b.start) - now.getTime() <= DAY_MS));
   const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type) && p.createdAt && p.createdAt >= since);
 
-  const listening = recentListening(dataDir, { now });
+  const listening = recentListening(dataDir, { now, hours: FRESH_HOURS });
   const products = config?.research?.pilotCandidates?.products ?? DEFAULT_PRODUCTS;
-  const candidates = recentCandidates(dataDir, { now }).map((p) => ({ ...p, suggest: suggestProduct(p, products) }));
-  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates };
+  const candidates = recentCandidates(dataDir, { now, hours: FRESH_HOURS }).map((p) => ({ ...p, suggest: suggestProduct(p, products) }));
+  const signals = recentSignals(dataDir, { now, hours: FRESH_HOURS });
+  const footprint = footprintChanges(dataDir);
+  return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates, signals, footprint };
 }
 
 // ---------- rendering ----------
@@ -69,6 +77,10 @@ function headline(c) {
   if (c.brief) bits.push('market news');
   const chatter = Object.values(c.listening ?? {}).reduce((a, l) => a + l.length, 0);
   if (chatter) bits.push(`${chatter} new mention${chatter === 1 ? '' : 's'} elsewhere`);
+  const sg = c.signals ?? {};
+  const buyers = (sg.funded?.length ?? 0) + (sg.hiring?.length ?? 0) + (sg.asking?.length ?? 0);
+  if (buyers) bits.push(`${buyers} buying signal${buyers === 1 ? '' : 's'}`);
+  if (sg.trigger?.length) bits.push(`${sg.trigger.length} reason${sg.trigger.length === 1 ? '' : 's'} to reach out today`);
   if (c.candidates?.length) bits.push(`${c.candidates.length} ${c.candidates.length === 1 ? 'person' : 'people'} to invite`);
   const ext = externalCount(c.bookings);
   if (ext) bits.push(`${ext} meeting${ext === 1 ? '' : 's'} or inquir${ext === 1 ? 'y' : 'ies'} from outside the team`);
@@ -86,6 +98,9 @@ function numbersLines(c) {
     `Buyers to date: ${n(pu.value)}${signed(pu.delta)}. Revenue last 24h: ${usd(p.revenue.packsRevenueUsdWindow)}, last 7 days: ${usd(p.revenue.packsRevenueUsd7d)}, MRR ${usd(p.revenue.mrrUsd)}.`,
     `Debates run: ${n(p.usage.debatesWindow)} in 24h, ${n(p.usage.debates7d)} in 7 days.`
   ];
+  const tot = (k) => fund(p, k).value, pct = (a, b) => (typeof a === 'number' && typeof b === 'number' && b > 0 ? `${Math.round((a / b) * 100)}%` : null);
+  const f1 = pct(tot('firstDebateTotal'), tot('signupsTotal')), f2 = pct(tot('purchasedTotal'), tot('firstDebateTotal'));
+  if (f1) lines.push(`Funnel to date: ${n(tot('signupsTotal'))} signups, ${n(tot('firstDebateTotal'))} ran a first debate (${f1} of signups)${f2 ? `, ${n(tot('purchasedTotal'))} bought (${f2} of those who ran one)` : ''}.`);
   const stuck = p.cohorts?.signedUpNoDebate7d;
   if (stuck > 0) lines.push(`${stuck} recent signup${stuck === 1 ? '' : 's'} never ran a first debate. A short nudge with an example question could convert them.`);
   return lines;
@@ -128,6 +143,19 @@ export function renderText(c, dateLabel) {
     for (const p of c.candidates) out.push(`- ${p.name} ${p.handle} on ${p.source}, ${p.reach.toLocaleString('en-US')} ${REACH_LABEL[p.source]} ${p.url}`, `  Recent: ${clip(p.evidence?.title, 140)}${p.evidence?.url ? ` ${p.evidence.url}` : ''}`, `  Suggest: ${suggestLine(p.suggest)}`);
     out.push('');
   }
+  const sg = c.signals ?? {};
+  const SIG = [['funded', 'Just funded (AI teams that raised in the last day)'], ['hiring', 'Hiring for AI roles'], ['asking', 'Asking out loud which model to use or how to check one']];
+  if (SIG.some(([k]) => sg[k]?.length)) {
+    out.push('BUYING SIGNALS (teams that may need a second opinion; check them out before reaching out)');
+    for (const [k, label] of SIG) if (sg[k]?.length) { out.push(`${label}:`); for (const it of sg[k]) out.push(`- ${it.who ? `${it.who}: ` : ''}${clip(it.title, 150)} (${it.note}) ${it.url}`); }
+    out.push('');
+  }
+  if (sg.trigger?.length) {
+    out.push('REASONS TO REACH OUT TODAY (news, and what Pilot can honestly say about it)');
+    for (const it of sg.trigger) out.push(`- ${it.category}: ${clip(it.title, 150)} (${it.note}) ${it.url}`, `  Angle: ${it.angle}`);
+    out.push('');
+  }
+  if (c.footprint?.length) out.push('PILOT FOOTPRINT (what changed on GitHub)', ...c.footprint.map((l) => `- ${l}`), '');
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
   if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (new, or happening within 24 hours)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
@@ -170,6 +198,17 @@ export function renderHtml(c, dateLabel) {
     parts.push(`<h2 style="${H2}">People to invite to try one of our tools</h2>`, `<p style="${P}color:#666;font-size:13px;">Not sales leads: the ask is to try it and, if they like it, post about it. Ranked by audience size and how recently they posted on the topic. The suggested tool is picked from words in their bio and recent post; E3D Pilot is the default.</p>`);
     parts.push(ul(c.candidates.map((p) => `<a href="${esc(p.url)}" style="color:#2952cc;"><b>${esc(p.name)}</b> ${esc(p.handle)}</a> &middot; ${esc(p.source)} &middot; ${p.reach.toLocaleString('en-US')} ${esc(REACH_LABEL[p.source])}<br><span style="color:#666;font-size:13px;">Recent: ${p.evidence?.url ? `<a href="${esc(p.evidence.url)}" style="color:#666;">${esc(clip(p.evidence?.title, 140))}</a>` : esc(clip(p.evidence?.title, 140))}</span><br><span style="font-size:13px;"><b>Suggest:</b> ${esc(suggestLine(p.suggest))}</span>`)));
   }
+  const sg = c.signals ?? {};
+  const SIG = [['funded', 'Just funded (AI teams that raised in the last day)'], ['hiring', 'Hiring for AI roles'], ['asking', 'Asking out loud which model to use or how to check one']];
+  if (SIG.some(([k]) => sg[k]?.length)) {
+    parts.push(`<h2 style="${H2}">Buying signals</h2>`, `<p style="${P}color:#666;font-size:13px;">Teams that may need a second opinion. Check them out before reaching out.</p>`);
+    for (const [k, label] of SIG) if (sg[k]?.length) parts.push(`<p style="${P}"><b>${esc(label)}</b></p>`, ul(sg[k].map((it) => `${it.who ? `<b>${esc(it.who)}</b>: ` : ''}<a href="${esc(it.url)}" style="color:#2952cc;">${esc(clip(it.title, 150))}</a> <span style="color:#666;">(${esc(it.note)})</span>`)));
+  }
+  if (sg.trigger?.length) {
+    parts.push(`<h2 style="${H2}">Reasons to reach out today</h2>`, `<p style="${P}color:#666;font-size:13px;">News, and what Pilot can honestly say about it.</p>`);
+    parts.push(ul(sg.trigger.map((it) => `<b>${esc(it.category)}</b>: <a href="${esc(it.url)}" style="color:#2952cc;">${esc(clip(it.title, 150))}</a> <span style="color:#666;">(${esc(it.note)})</span><br><span style="background:#f4f4f6;display:inline-block;padding:4px 6px;border-radius:4px;margin-top:3px;"><b>Angle:</b> ${esc(it.angle)}</span>`)));
+  }
+  if (c.footprint?.length) parts.push(`<h2 style="${H2}">Pilot footprint (what changed on GitHub)</h2>`, ul(c.footprint.map(esc)));
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
   if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (new, or happening within 24 hours)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
@@ -189,6 +228,10 @@ async function main() {
   for (const err of listened.errors) process.stderr.write(`Listening source ${err.source} failed: ${err.message}\n`);
   const found = await collectCandidates({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'candidates', message: e.message }] }));
   for (const err of found.errors) process.stderr.write(`Candidate source ${err.source} failed: ${err.message}\n`);
+  const sigs = await collectSignals({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'signals', message: e.message }] }));
+  for (const err of sigs.errors) process.stderr.write(`Signal source ${err.source} failed: ${err.message}\n`);
+  const foot = await collectFootprint({ instanceConfig: config, dataDir, now }).catch((e) => ({ errors: [{ source: 'footprint', message: e.message }] }));
+  for (const err of foot.errors) process.stderr.write(`Footprint ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now, config });
   const text = renderText(c, dateLabel);
   const html = renderHtml(c, dateLabel);
