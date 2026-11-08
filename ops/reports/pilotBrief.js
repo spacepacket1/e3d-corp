@@ -11,6 +11,7 @@ import { listProposals } from '../../lib/proposals/store.js';
 import { sendEmailViaSes } from '../../lib/outreach/sesTransport.js';
 import { buildPilotSummary } from '../../lib/pilot/summary.js';
 import { collectListening, recentListening } from '../../lib/research/pilotListening.js';
+import { suggestProduct, DEFAULT_PRODUCTS } from '../../lib/pilot/products.js';
 import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
 
@@ -24,6 +25,7 @@ const clip = (s, n) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); 
 const fund = (s, key) => s.funnel.find((f) => f.key === key) ?? { value: null, delta: null };
 const n = (v) => (v === null || v === undefined ? 'n/a' : v);
 const signed = (d) => (d === null || d === undefined ? '' : ` (${d >= 0 ? '+' : ''}${d} vs yesterday)`);
+const suggestLine = (g) => (g ? `${g.name} (${g.pitch})${g.matched?.length ? `; they mention: ${g.matched.join(', ')}` : '; default pick'} ${g.url}` : '');
 const usd = (v) => (typeof v === 'number' ? `$${v.toFixed(v % 1 ? 2 : 0)}` : 'n/a');
 
 // ---------- data ----------
@@ -51,7 +53,8 @@ export function collectBrief({ dataDir, now = new Date(), config = null }) {
   const drafts = listProposals(dataDir, { status: 'pending' }).filter((p) => /post|ad|copy|content/i.test(p.type));
 
   const listening = recentListening(dataDir, { now });
-  const candidates = recentCandidates(dataDir, { now });
+  const products = config?.research?.pilotCandidates?.products ?? DEFAULT_PRODUCTS;
+  const candidates = recentCandidates(dataDir, { now }).map((p) => ({ ...p, suggest: suggestProduct(p, products) }));
   return { now, pilot, brief, leads, leadTotal: leads.length, bookings, drafts, listening, candidates };
 }
 
@@ -118,8 +121,8 @@ export function renderText(c, dateLabel) {
     c.leads.slice(0, MAX_LEADS).forEach((l, i) => out.push(`${i + 1}. ${l.url}`, `   Post: ${clip(l.post, 240)}`, `   Why it fits: ${clip(l.topic, 120)}`, `   Draft reply: ${clip(l.reply, 400)}`, ''));
   }
   if (c.candidates?.length) {
-    out.push('PEOPLE TO INVITE TO TRY PILOT (not sales leads: ask them to try it and, if they like it, post about it)');
-    for (const p of c.candidates) out.push(`- ${p.name} ${p.handle} on ${p.source}, ${p.reach.toLocaleString('en-US')} ${REACH_LABEL[p.source]} ${p.url}`, `  Recent: ${clip(p.evidence?.title, 140)}${p.evidence?.url ? ` ${p.evidence.url}` : ''}`);
+    out.push('PEOPLE TO INVITE TO TRY ONE OF OUR TOOLS (not sales leads: ask them to try it and, if they like it, post about it)');
+    for (const p of c.candidates) out.push(`- ${p.name} ${p.handle} on ${p.source}, ${p.reach.toLocaleString('en-US')} ${REACH_LABEL[p.source]} ${p.url}`, `  Recent: ${clip(p.evidence?.title, 140)}${p.evidence?.url ? ` ${p.evidence.url}` : ''}`, `  Suggest: ${suggestLine(p.suggest)}`);
     out.push('');
   }
   const nudges = nudgeLines(c);
@@ -161,8 +164,8 @@ export function renderHtml(c, dateLabel) {
     }
   }
   if (c.candidates?.length) {
-    parts.push(`<h2 style="${H2}">People to invite to try Pilot</h2>`, `<p style="${P}color:#666;font-size:13px;">Not sales leads: the ask is to try it and, if they like it, post about it. Ranked by audience size and how recently they posted on the topic.</p>`);
-    parts.push(ul(c.candidates.map((p) => `<a href="${esc(p.url)}" style="color:#2952cc;"><b>${esc(p.name)}</b> ${esc(p.handle)}</a> &middot; ${esc(p.source)} &middot; ${p.reach.toLocaleString('en-US')} ${esc(REACH_LABEL[p.source])}<br><span style="color:#666;font-size:13px;">Recent: ${p.evidence?.url ? `<a href="${esc(p.evidence.url)}" style="color:#666;">${esc(clip(p.evidence?.title, 140))}</a>` : esc(clip(p.evidence?.title, 140))}</span>`)));
+    parts.push(`<h2 style="${H2}">People to invite to try one of our tools</h2>`, `<p style="${P}color:#666;font-size:13px;">Not sales leads: the ask is to try it and, if they like it, post about it. Ranked by audience size and how recently they posted on the topic. The suggested tool is picked from words in their bio and recent post; E3D Pilot is the default.</p>`);
+    parts.push(ul(c.candidates.map((p) => `<a href="${esc(p.url)}" style="color:#2952cc;"><b>${esc(p.name)}</b> ${esc(p.handle)}</a> &middot; ${esc(p.source)} &middot; ${p.reach.toLocaleString('en-US')} ${esc(REACH_LABEL[p.source])}<br><span style="color:#666;font-size:13px;">Recent: ${p.evidence?.url ? `<a href="${esc(p.evidence.url)}" style="color:#666;">${esc(clip(p.evidence?.title, 140))}</a>` : esc(clip(p.evidence?.title, 140))}</span><br><span style="font-size:13px;"><b>Suggest:</b> ${esc(suggestLine(p.suggest))}</span>`)));
   }
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));

@@ -68,6 +68,7 @@ test('ranking uses audience and engagement only; no demographic field is read or
   assert.equal(eligible({ ...person, reach: null }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'hidden audience size is not guessed');
   assert.equal(eligible({ ...person, reach: 20_000_000 }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'a mega-account is outside the reachable band');
   assert.equal(eligible({ ...person, bio: 'cooking and travel', evidence: { title: 'my pasta recipe', engagement: 1 } }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'must visibly talk about AI building');
+  assert.equal(eligible({ ...person, bio: 'political podcast host', evidence: { title: 'my guest on the show', engagement: 1 } }, { minReach: DEFAULT_MIN_REACH, exclude: new Set() }), false, 'a podcaster with no AI angle is not a candidate');
   assert.equal(dedupe([person, { ...person, evidence: { engagement: 50 } }]).length, 1);
   const src = fs.readFileSync(new URL('../lib/research/pilotCandidates.js', import.meta.url), 'utf8');
   assert.ok(!/\b(age|birth|gender|genz|gen z)\b\s*[:=(]/i.test(src.replace(/\/\/.*$/gm, '')), 'no age or demographic inference in code');
@@ -79,9 +80,9 @@ test('the brief shows a people-to-invite section, framed as invitations and not 
     await collectCandidates({ instanceConfig: cfg, dataDir, now: NOW, env, fetchImpl: fakeFetch() });
     const c = collectBrief({ dataDir, now: NOW });
     const text = renderText(c, 'Sun, Nov 8, 2026'), html = renderHtml(c, 'Sun, Nov 8, 2026');
-    assert.match(text, /PEOPLE TO INVITE TO TRY PILOT \(not sales leads/);
+    assert.match(text, /PEOPLE TO INVITE TO TRY ONE OF OUR TOOLS \(not sales leads/);
     assert.match(text, /Dev Channel @devchan on youtube, 120,000 subscribers/);
-    assert.match(html, /People to invite to try Pilot/);
+    assert.match(html, /People to invite to try one of our tools/);
     assert.match(text, /5 people to invite/);
     const empty = collectBrief({ dataDir: tmp(), now: NOW });
     assert.ok(!/PEOPLE TO INVITE/.test(renderText(empty, 'x')));
