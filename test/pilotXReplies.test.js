@@ -146,3 +146,26 @@ test('migration sets research.x.grounding = pilot, idempotently, and validates',
     assert.ok(dry.summary.some((l) => l.includes('grounding')));
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('replay: stored X search results are re-filtered and drafted with no new search, and each filter is counted', async () => {
+  const { replayXEngagement } = await import('../ops/reports/replayXEngagement.js');
+  const { appendEvent } = await import('../lib/events/store.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'replay-'));
+  try {
+    const mk = (id, text, likes = 20) => ({ id, text, public_metrics: { like_count: likes, retweet_count: 0, reply_count: 0 }, reply_settings: 'everyone' });
+    const store = (query, status, tweets) => appendEvent(dir, { type: 'evidence.gathered', source: 'research.x', subject: { type: 'x', id: query }, payload: { kind: 'x-search', query, result: { status, tweets } }, correlationId: 'c-' + query });
+    store('q1', 'unavailable', []);                              // a 402 run: ignored
+    store('q1', 'ok', [mk('1', 'which model do I trust for this?'), mk('2', 'pizza night', 20), mk('3', 'quiet post about models', 0)]);
+    const config = { llm: { providers: { claude: { kind: 'anthropic', apiKeyEnvVar: 'K' } } }, roles: { 'x.engagementReply': { provider: 'claude' } }, research: { x: { bearerTokenEnvVar: 'XB', searchQueries: ['q1'], topics: ['model disagreement'], draftsPerRun: 5, grounding: 'pilot', minEngagement: 6 } } };
+    const relevanceCheck = async ({ text }) => ({ relevant: !/pizza/.test(text), matchedTopic: 'topic_0' });
+    const out = await replayXEngagement({ config, dataDir: dir, env: { XB: 't' }, relevanceCheck, llmClient: async () => ({ text: reply({}) }), log: () => {}, warn: () => {} });
+    assert.equal(out.stats.posts, 3);
+    assert.equal(out.stats.thin, 1, 'the zero-engagement post is under the floor');
+    assert.equal(out.stats.notRelevant, 1, 'the pizza post is off topic');
+    assert.equal(out.draftsQueued, 1);
+    assert.equal(queryEvents(dir, { type: 'x.draftQueued' }).length, 1);
+    // Running it again does not queue the same post twice.
+    const again = await replayXEngagement({ config, dataDir: dir, env: { XB: 't' }, relevanceCheck, llmClient: async () => ({ text: '{}' }), log: () => {}, warn: () => {} });
+    assert.equal(again.draftsQueued, 0);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
