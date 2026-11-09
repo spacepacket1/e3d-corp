@@ -94,3 +94,26 @@ test('the brief shows a people-to-invite section, framed as invitations and not 
     assert.ok(!/PEOPLE TO INVITE/.test(renderText(empty, 'x')));
   } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
 });
+
+test('X candidate search is metered: two queries, ten posts each by default, configurable, and it stops at the first failure', async () => {
+  const seen = [];
+  const countingFetch = async (url) => {
+    const u = String(url);
+    if (u.includes('/2/tweets/search/recent')) { seen.push(new URL(u).searchParams.get('max_results')); return fakeFetch()(url); }
+    return fakeFetch()(url);
+  };
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'xcost-'));
+  try {
+    await collectCandidates({ instanceConfig: {}, dataDir, now: new Date('2026-11-09T12:00:00Z'), env: { X_SEARCH_BEARER_TOKEN: 't', YOUTUBE_API_KEY: 'k' }, fetchImpl: countingFetch });
+    assert.deepEqual(seen, ['10', '10'], 'two X queries, ten posts each');
+    seen.length = 0;
+    await collectCandidates({ instanceConfig: { research: { pilotCandidates: { xMaxResults: 25 } } }, dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'xcost2-')), now: new Date('2026-11-09T12:00:00Z'), env: { X_SEARCH_BEARER_TOKEN: 't', YOUTUBE_API_KEY: 'k' }, fetchImpl: countingFetch });
+    assert.deepEqual(seen, ['25', '25']);
+    // A 402 (credits depleted) on the first query stops X for the run: no second query is sent.
+    seen.length = 0;
+    const out402 = await collectCandidates({ instanceConfig: {}, dataDir: fs.mkdtempSync(path.join(os.tmpdir(), 'xcost3-')), now: new Date('2026-11-09T12:00:00Z'), env: { X_SEARCH_BEARER_TOKEN: 't' }, disabled: [],
+      fetchImpl: async (url) => { if (String(url).includes('/2/tweets/search/recent')) { seen.push('q'); return { ok: false, status: 402, json: async () => ({}) }; } return fakeFetch()(url); } });
+    assert.equal(seen.length, 1, 'only one request after a 402');
+    assert.ok(out402.errors.some((e) => e.source === 'x'));
+  } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
+});
