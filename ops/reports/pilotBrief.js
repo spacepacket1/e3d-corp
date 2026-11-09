@@ -5,6 +5,7 @@
 // Usage: node pilotBrief.js --instance futco [--dry-run <file.html>] [--to a@b.c]   (recipient env: FUTCO_PILOT_BRIEF_TO_EMAIL)
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { loadInstance } from '../../lib/config.js';
 import { queryEvents } from '../../lib/events/store.js';
 import { listProposals } from '../../lib/proposals/store.js';
@@ -276,8 +277,27 @@ async function main() {
   const to = arg('--to') ?? process.env[RECIPIENT_ENV_VAR];
   if (!to) throw new Error(`Recipient env var "${RECIPIENT_ENV_VAR}" is not set`);
   const subject = `Pilot brief — ${headline(c)} — ${now.toISOString().slice(0, 10)}`;
+  // Keep an exact copy of what is sent (saved first, so a failed send still leaves one). Dated file names; same-day reruns get a time suffix.
+  const copy = saveBriefCopy({ dataDir, now, subject, to, text, html, c });
+  process.stdout.write(`Saved copy: ${copy}\n`);
   const result = await sendEmailViaSes({ instanceConfig: config, to, subject, body: text, htmlBody: html });
   process.stdout.write(`Sent Pilot marketing & sales brief to ${to} (messageId=${result.messageId})\n`);
+}
+
+// Writes briefs/<date>[-hhmm].{html,txt,json} under the instance data dir. The json records subject, recipients and which optional sections were present.
+export function saveBriefCopy({ dataDir, now, subject, to, text, html, c }) {
+  const dir = path.join(dataDir, 'briefs');
+  fs.mkdirSync(dir, { recursive: true });
+  const day = now.toISOString().slice(0, 10);
+  let base = path.join(dir, day);
+  if (fs.existsSync(`${base}.html`)) base = `${base}-${now.toISOString().slice(11, 16).replace(':', '')}`;
+  fs.writeFileSync(`${base}.html`, html);
+  fs.writeFileSync(`${base}.txt`, text);
+  fs.writeFileSync(`${base}.json`, JSON.stringify({
+    savedAt: now.toISOString(), subject, to,
+    sections: { moonshot: Boolean(c.wildcard?.moonshot), ideas: c.wildcard?.practical?.length ?? 0, wildcardRan: c.wildcard !== undefined }
+  }, null, 2));
+  return `${base}.html`;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

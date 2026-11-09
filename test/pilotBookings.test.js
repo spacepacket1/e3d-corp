@@ -72,3 +72,19 @@ test('the headline never asks anyone to approve drafts', () => {
   assert.match(renderText(c, 'x'), /Today: 3 drafts ready to use/);
   assert.doesNotMatch(renderText(c, 'x'), /to approve/);
 });
+
+test('saveBriefCopy keeps html, text and a section record; a same-day rerun does not overwrite', async () => {
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const { saveBriefCopy } = await import('../ops/reports/pilotBrief.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'brief-copy-'));
+  const args = { dataDir: dir, now: new Date('2026-11-10T15:30:00Z'), subject: 's', to: 'a@b.c', text: 'T', html: '<p>H</p>', c: { wildcard: { practical: [1, 2], moonshot: { title: 'm' } } } };
+  const first = saveBriefCopy(args);
+  const second = saveBriefCopy({ ...args, html: '<p>H2</p>', now: new Date('2026-11-10T16:45:00Z') });
+  assert.notEqual(first, second);
+  assert.equal(fs.readFileSync(first, 'utf8'), '<p>H</p>');
+  const meta = JSON.parse(fs.readFileSync(first.replace('.html', '.json'), 'utf8'));
+  assert.deepEqual(meta.sections, { moonshot: true, ideas: 2, wildcardRan: true });
+  assert.equal(fs.readFileSync(first.replace('.html', '.txt'), 'utf8'), 'T');
+});
