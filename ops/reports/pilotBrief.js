@@ -83,7 +83,7 @@ function headline(c) {
   if (c.candidates?.length) bits.push(`${c.candidates.length} ${c.candidates.length === 1 ? 'person' : 'people'} to invite`);
   const ext = externalCount(c.bookings);
   if (ext) bits.push(`${ext} meeting${ext === 1 ? '' : 's'} or inquir${ext === 1 ? 'y' : 'ies'} from outside the team`);
-  if (c.drafts.length) bits.push(`${c.drafts.length} draft${c.drafts.length === 1 ? '' : 's'} to approve`);
+  if (c.drafts.length) bits.push(`${c.drafts.length} draft${c.drafts.length === 1 ? '' : 's'} ready to use`);
   return bits.length ? bits.join(', ') : 'quiet day';
 }
 

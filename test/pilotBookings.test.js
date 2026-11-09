@@ -66,3 +66,9 @@ test('a booking is shown once: not again the next day, except a reminder the day
     assert.match(at('2026-11-11T20:00:00Z'), /Intro call/, 'the day before: reminder');
   } finally { fs.rmSync(dataDir, { recursive: true, force: true }); }
 });
+
+test('the headline never asks anyone to approve drafts', () => {
+  const c = { leadTotal: 0, brief: null, listening: {}, candidates: [], signals: {}, bookings: [], drafts: [{}, {}, {}], pilot: { available: false } };
+  assert.match(renderText(c, 'x'), /Today: 3 drafts ready to use/);
+  assert.doesNotMatch(renderText(c, 'x'), /to approve/);
+});
