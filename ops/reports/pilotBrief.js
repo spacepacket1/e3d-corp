@@ -16,6 +16,7 @@ import { recentSignals, collectSignals } from '../../lib/research/pilotSignals.j
 import { suggestProduct, DEFAULT_PRODUCTS } from '../../lib/pilot/products.js';
 import { summarizeBookings, bookingLine, externalCount } from '../../lib/pilot/bookings.js';
 import { collectCandidates, recentCandidates, REACH_LABEL } from '../../lib/research/pilotCandidates.js';
+import { collectEvents, eventTime } from '../../lib/research/pilotEvents.js';
 import { buildWildcardEvidence, runWildcardSection } from '../../lib/pilot/wildcard.js';
 
 const RECIPIENT_ENV_VAR = 'FUTCO_PILOT_BRIEF_TO_EMAIL';
@@ -158,6 +159,11 @@ export function renderText(c, dateLabel) {
   const nudges = nudgeLines(c);
   if (nudges.length) out.push('CUSTOMERS TO NUDGE', ...nudges.map((l) => `- ${l}`), '');
   if (c.bookings.length) out.push('MEETINGS AND INQUIRIES (new, or happening within 24 hours)', ...c.bookings.map((b) => `- ${bookingLine(b)}`), '');
+  if (c.events?.length) {
+    out.push('AI EVENTS TODAY (Bay Area, Pacific time)');
+    for (const e of c.events) out.push(`- ${eventTime(e)}: ${e.title}${e.location ? `, ${e.location}` : ''}${e.url ? ` ${e.url}` : ''}`);
+    out.push('');
+  }
   if (c.drafts.length) out.push('DRAFT POSTS READY', `- ${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.`, '');
   const w = c.wildcard;
   if (w?.practical?.length) {
@@ -221,6 +227,10 @@ export function renderHtml(c, dateLabel) {
   const nudges = nudgeLines(c);
   if (nudges.length) parts.push(`<h2 style="${H2}">Customers to nudge</h2>`, ul(nudges.map(esc)));
   if (c.bookings.length) parts.push(`<h2 style="${H2}">Meetings and inquiries (new, or happening within 24 hours)</h2>`, ul(c.bookings.map((b) => esc(bookingLine(b)))));
+  if (c.events?.length) {
+    parts.push(`<h2 style="${H2}">AI events today</h2>`, `<p style="${P}color:#666;font-size:13px;">Bay Area, Pacific time.</p>`);
+    parts.push(ul(c.events.map((e) => `<b>${esc(eventTime(e))}</b> &middot; ${e.url ? `<a href="${esc(e.url)}" style="color:#2952cc;">${esc(e.title)}</a>` : esc(e.title)}${e.location ? ` <span style="color:#666;">&mdash; ${esc(e.location)}</span>` : ''}`)));
+  }
   if (c.drafts.length) parts.push(`<h2 style="${H2}">Draft posts ready</h2>`, `<p style="${P}">${c.drafts.length} draft post(s) are ready to use. No approval needed: go ahead, or reply with edits.</p>`);
   if (c.wildcard) {
     const w = c.wildcard;
@@ -257,6 +267,10 @@ async function main() {
   const sigs = await collectSignals({ instanceConfig: config, dataDir, now }).catch((e) => ({ added: [], errors: [{ source: 'signals', message: e.message }] }));
   for (const err of sigs.errors) process.stderr.write(`Signal source ${err.source} failed: ${err.message}\n`);
   const c = collectBrief({ dataDir, now, config });
+  // Public iCal feeds from instance.json (pilotBrief.events.icsFeeds). No feeds or any failure simply leaves the section out.
+  const ev = await collectEvents({ instanceConfig: config, now }).catch((e) => ({ events: [], errors: [{ source: 'events', message: e.message }] }));
+  for (const err of ev.errors) process.stderr.write(`Events feed ${err.source} failed: ${err.message}\n`);
+  c.events = ev.events;
   // Off unless asked for. When on, any failure or "no idea today" simply leaves the section out.
   if (process.argv.includes('--wildcard')) {
     const wc = config?.pilotBrief?.wildcard ?? {};
@@ -295,7 +309,7 @@ export function saveBriefCopy({ dataDir, now, subject, to, text, html, c }) {
   fs.writeFileSync(`${base}.txt`, text);
   fs.writeFileSync(`${base}.json`, JSON.stringify({
     savedAt: now.toISOString(), subject, to,
-    sections: { moonshot: Boolean(c.wildcard?.moonshot), ideas: c.wildcard?.practical?.length ?? 0, wildcardRan: c.wildcard !== undefined }
+    sections: { events: c.events?.length ?? 0, moonshot: Boolean(c.wildcard?.moonshot), ideas: c.wildcard?.practical?.length ?? 0, wildcardRan: c.wildcard !== undefined }
   }, null, 2));
   return `${base}.html`;
 }
